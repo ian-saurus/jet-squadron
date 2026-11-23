@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JET SQUADRON — Base Breaker</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#05050e;color:#dfe6ff;font-family:Rajdhani,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:10px;overflow-x:hidden}
+h1{font-family:Orbitron,sans-serif;font-weight:900;font-size:26px;letter-spacing:5px;background:linear-gradient(90deg,#0ff,#7af,#f0f,#ff5e9c,#0ff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 12px #0ff9);animation:hue 6s linear infinite}
+@keyframes hue{to{background-position:300% 0}}
+#hud{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;justify-content:center;align-items:center;width:100%;max-width:960px;font-size:14px}
+#hud span{background:rgba(10,10,28,.8);border:1px solid #0ff4;border-radius:10px;padding:4px 12px;font-weight:600}
+#hud b{color:#ff0;font-family:Orbitron;font-size:12px}
+#basebar{width:100%;max-width:960px;height:14px;background:#111;border:1px solid #f0f;border-radius:7px;overflow:hidden;margin-bottom:6px}
+#basefill{height:100%;width:100%;background:linear-gradient(90deg,#f0f,#f33);transition:width .3s}
+#wrap{position:relative;max-width:96vw}
+canvas{display:block;width:900px;max-width:96vw;height:auto;background:#0a0a1e;border:2px solid #0ff;border-radius:10px;box-shadow:0 0 24px #0ff3,0 0 64px #f0f2;touch-action:none;cursor:crosshair}
+#modes{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap;justify-content:center}
+#modes button,.smbtn{font-family:Orbitron;font-size:11px;background:#1c1c38;color:#dfe6ff;border:1px solid #3d3d6e;border-radius:20px;padding:7px 14px;cursor:pointer;letter-spacing:1px}
+#modes button.active{background:#0ff;color:#000;border-color:#0ff;box-shadow:0 0 12px #0ff}
+#shopBtn{font-family:Orbitron;font-size:13px;background:#2a1a5e;color:#fff;border:1px solid #ff0;border-radius:8px;padding:8px 22px;cursor:pointer;animation:glow 1.5s infinite}
+@keyframes glow{50%{box-shadow:0 0 18px #ff0}}
+#overlay{position:fixed;inset:0;background:#07070f;z-index:20;padding:24px 14px 60px;overflow-y:auto;overscroll-behavior:contain}
+#panel{max-width:760px;margin:0 auto;text-align:center}
+#panel h1{font-size:46px;margin-bottom:2px}
+#panel h2{font-size:12px;letter-spacing:6px;color:#f0f;margin-bottom:12px}
+.card{background:#14142a;border:1px solid #4a4a8a;border-radius:10px;padding:18px 20px;margin:12px 0;text-align:left}
+.card h3{color:#5ee6ff;font-family:Orbitron;font-size:13px;letter-spacing:3px;margin-bottom:8px}
+.card p,.dim{color:#9aa3c0;font-size:14px;line-height:1.6}
+.modepick{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+@media(max-width:640px){.modepick{grid-template-columns:1fr}}
+.pick{background:#1c1c3a;border:2px solid #33335a;border-radius:10px;padding:14px;cursor:pointer;text-align:center}
+.pick:hover,.pick.sel{border-color:#0ff;box-shadow:0 0 16px #0ff5}
+.pick b{font-family:Orbitron;font-size:13px;color:#0ff}
+.pick p{font-size:13px;color:#9ab;margin-top:6px}
+.bigbtn{display:inline-block;font-family:Orbitron;font-weight:700;font-size:18px;background:#0ff;color:#000;border:none;border-radius:8px;padding:14px 50px;cursor:pointer;margin-top:14px;letter-spacing:2px}
+.bigbtn:hover{background:#fff}
+.shopgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+@media(max-width:560px){.shopgrid{grid-template-columns:1fr}}
+.buy{display:block;width:100%;text-align:left;background:#22224a;color:#fff;border:1px solid #0ff;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px}
+.buy:hover:not(:disabled){background:#0ff;color:#000}
+.buy:disabled{opacity:.4;cursor:default}
+.buy b{font-family:Orbitron;font-size:12px}
+.buy small{opacity:.75;display:block;font-size:12px}
+.board table{width:100%;border-collapse:collapse;font-size:13px}
+.board th,.board td{padding:4px 6px;border-bottom:1px solid #33335a;text-align:left}
+.board th{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#9a8}
+.board .sc,.board td:last-child{text-align:right;color:#ff0;font-weight:bold}
+.smbtn.active{border-color:#0f8 !important;color:#0f8 !important;box-shadow:0 0 12px #0f85}
+#gmRow .pick.sel{border-color:#f0f;box-shadow:0 0 16px #f0f5}
+#gmRow .pick.sel b{color:#f0f}
+#upgbar{max-width:960px}
+#pilotEmail{font-family:Rajdhani,system-ui,sans-serif !important}
+#launchBtn{position:sticky;bottom:12px;z-index:5}
+#toast{position:absolute;left:50%;top:60px;transform:translateX(-50%);background:#000c;border:1px solid #ff0;color:#ff0;font-family:Orbitron;font-size:13px;padding:8px 18px;border-radius:20px;display:none;z-index:5;pointer-events:none;max-width:90%;white-space:normal;text-align:center}
+#hint{font-size:12px;color:#667;margin-top:6px;text-align:center;max-width:960px}
+kbd{background:#222;border:1px solid #555;border-radius:4px;padding:0 5px;font-size:11px}
+@media(max-width:640px){
+  h1{font-size:18px;letter-spacing:3px;text-align:center}
+  #panel h1{font-size:30px}
+  #overlay{padding:16px 10px 60px}
+  #hud{font-size:12px;gap:6px}
+  #hud span{padding:3px 8px}
+  #shopBtn{font-size:11px !important;padding:6px 12px !important}
+  #upgbar{font-size:10px}
+  #toast{top:10px;font-size:11px;padding:6px 12px}
+}
+</style>
+</head>
+<body>
+<h1>✈ JET SQUADRON : BASE BREAKER</h1>
+<div id="basebar" title="Enemy base HP"><div id="basefill"></div></div>
+<div id="hud">
+  <span>👨‍✈️ <b id="hPilot">GUEST</b></span>
+  <span>✈ Jets <b id="hJets">5</b></span>
+  <span>💰 Cash <b id="hCash">$0</b></span>
+  <span>🌊 Round <b id="hWave">1</b></span>
+  <span>☠ Kills <b id="hKills">0</b></span>
+  <span>🚩 Zones <b id="hZones">0/2</b></span>
+  <button class="smbtn" id="shopBtn" title="Shop opens between rounds (anytime in eternal)" onclick="toggleShop(true)">🛒 SHOP [B]</button>
+  <button class="smbtn" id="saveBtn" title="Save to a slot (autosaves too)" onclick="openSaveModal()">💾 SAVE</button>
+  <button class="smbtn" id="stopBtn" title="Save and stop back to menu (autosaves anyway)" onclick="stopRun()">⏹ STOP</button>
+</div>
+<div id="upgbar" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:11px;color:#9ab;margin-bottom:4px"></div>
+<div id="modes">
+  <button id="m0" class="active" onclick="setMode(0)">1 · LEADER-FOLLOW</button>
+  <button id="m1" onclick="setMode(1)">2 · FORMATION MOVE</button>
+  <button id="m2" onclick="setMode(2)">3 · RTS SELECT</button>
+</div>
+<div id="wrap">
+  <canvas id="cv" width="900" height="600"></canvas>
+  <div id="toast"></div>
+</div>
+<div id="hint">Move: <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> or mouse · Shoot: auto · <kbd>1/2/3</kbd> control mode · <kbd>B</kbd> shop (opens BETWEEN rounds) · <kbd>Space</kbd> missiles · RTS: drag-select, right-click to order · Autosaves every 10s + on round clear — STOP any time, RESUME from menu!</div>
+
+<div id="overlay"><div id="panel">
+  <h1>✈ JET SQUADRON</h1>
+  <h2>NO JET LIMIT · UPGRADES SAVED FOREVER</h2>
+  <div class="card"><h3>🎯 MISSION — PICK YOUR MODE</h3>
+  <div class="modepick" id="gmRow">
+    <div class="pick" id="gm0" onclick="pickGameMode('waves')"><b>🌊 WAVES</b><p>Endless wave rounds, no base. Clear the wave → shop opens between rounds → next wave. Die = run over.</p></div>
+    <div class="pick sel" id="gm1" onclick="pickGameMode('base')"><b>💥 BASE DESTROY</b><p>Base + waves. Clear each wave, shop between rounds, destroy the base to win.</p></div>
+    <div class="pick" id="gm2" onclick="pickGameMode('eternal')"><b>♾ ETERNAL</b><p>Nonstop swarm + respawning base. Shop anytime in-game (pauses). No rounds — survive for score.</p></div>
+  </div>
+  <p style="margin-top:6px">• Kill enemies → earn <b style="color:#ff0">$ cash</b> + salvage<br>• Grab <b>🪂 ejected pilots</b> to get <b style="color:#0f8">FREE jets (no limit!)</b><br>• Capture <b style="color:#c8f">🚩 beacons</b> for $ income + a free jet on first capture<br>• Upgrades are <b>PERMANENT & SAVED FOREVER</b> per pilot, even after defeat</p>
+  </div>
+  <div class="card"><h3>⬆️ UPGRADES — <span id="menuUpgPilot" style="color:#0f8">GUEST</span></h3>
+  <div id="menuUpg"><p class="dim">Loading…</p></div>
+  <p class="dim" style="margin-top:6px">Bought with run cash between rounds (waves/base) or anytime (eternal). Levels never reset.</p>
+  </div>
+  <div class="card"><h3>👨‍✈️ PILOT LOGIN <span id="loginState" style="color:#0f8"></span></h3>
+  <p class="dim">Logins stay on this device — you stay logged in unless you hit LOGOUT. Pick a callsign + email; upgrades + leaderboard follow the pilot.</p>
+  <p class="dim" id="loggedInAs" style="color:#0f8;margin-top:6px">Logged in as GUEST</p>
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+    <input id="pilotName" maxlength="16" autocomplete="username" aria-label="Callsign" placeholder="callsign e.g. MAVERICK" style="flex:1;min-width:140px;font-size:14px;background:#000;color:#0ff;border:1px solid #0ff6;border-radius:8px;padding:10px 12px;font-family:Orbitron">
+    <input id="pilotEmail" maxlength="64" type="email" autocomplete="email" aria-label="Email" placeholder="you@email.com" style="flex:1;min-width:180px;font-size:14px;background:#000;color:#0ff;border:1px solid #0ff6;border-radius:8px;padding:10px 12px">
+    <button class="smbtn" onclick="loginPilot()">LOGIN / CREATE</button>
+    <button class="smbtn" onclick="logoutPilot()">LOGOUT</button>
+  </div>
+  <div id="pilotRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+  </div>
+  <div class="card"><h3>🏆 LEADERBOARD — BEST RUN PER PILOT (this device)</h3>
+  <div class="board" id="boardTable"><p class="dim">No sorties logged yet. Fly, Commander!</p></div>
+  </div>
+  <div class="card"><h3>🕹 CHOOSE YOUR CONTROL — YOU CAN SWITCH ANYTIME WITH 1/2/3</h3>
+  <div class="modepick">
+    <div class="pick sel" id="p0" onclick="pickStartMode(0)"><b>✈ LEADER-FOLLOW</b><p>You fly the golden leader. 4 wingmen trail in V-formation and auto-fire. Best for dodging.</p></div>
+    <div class="pick" id="p1" onclick="pickStartMode(1)"><b>⬢ FORMATION MOVE</b><p>Whole squadron flies as one block toward your mouse / WASD. Tight, precise, aggressive.</p></div>
+    <div class="pick" id="p2" onclick="pickStartMode(2)"><b>▦ RTS SELECT</b><p>Drag a box to select jets, right-click (or click) to order them. Split your force, flank turrets.</p></div>
+  </div></div>
+  <button class="bigbtn" id="launchBtn" onclick="startGame()">▶ LAUNCH SQUADRON</button>
+  <button class="bigbtn" id="resumeBtn" style="display:none;background:#2a1a5e;border:1px solid #0f8" onclick="resumeGame()">▶ RESUME</button>
+  <div class="card" id="savesCard"><h3>💾 SAVED RUNS — <span id="savesPilot">GUEST</span></h3>
+  <div id="savesList"><p class="dim">No saves yet.</p></div>
+  </div>
+  <p class="dim" style="margin-top:10px">Tip: missiles (<kbd>Space</kbd>) need the missile upgrade. If all jets die but you can afford a new one, you'll auto-rebuild. Good hunting, Commander.</p>
+</div></div>
+
+<div id="shopModal" style="display:none;position:fixed;inset:0;background:#000a;z-index:30;align-items:center;justify-content:center;padding:16px">
+  <div class="card" style="max-width:560px;width:100%;border-color:#ff0;box-shadow:0 0 30px #ff05">
+    <h3>🛒 SUPPLY SHOP — Cash: <span id="sCash" style="color:#ff0">$0</span> <span id="shopPhase" style="color:#0f8"></span> <button class="smbtn" id="shopCloseBtn" style="float:right" onclick="onShopClose()">CLOSE [B]</button></h3>
+    <div class="shopgrid" id="shopGrid"></div>
+    <p class="dim" id="shopInfo" style="margin-top:8px"></p>
+    <button class="bigbtn" id="nextRoundBtn" style="display:none;width:100%;margin-top:10px" onclick="nextRound()">▶ START NEXT ROUND</button>
+    <button class="smbtn" id="resetMetaBtn" style="margin-top:8px;opacity:.7" onclick="if(confirm('Wipe permanent upgrades?'))resetMeta()">reset permanent upgrades</button>
+  </div>
+</div>
+
+<div id="saveModal" style="display:none;position:fixed;inset:0;background:#000a;z-index:30;align-items:center;justify-content:center;padding:16px">
+  <div class="card" style="max-width:560px;width:100%;border-color:#0ff;box-shadow:0 0 30px #0ff5">
+    <h3>💾 SAVE RUN — pick a slot <button class="smbtn" style="float:right" onclick="closeSaveModal()">CLOSE</button></h3>
+    <div class="shopgrid" id="saveGrid"></div>
+    <p class="dim" style="margin-top:8px">4 manual slots per pilot + 1 autosave slot. Autosave never touches your manual slots. STOP saves to the active slot.</p>
+  </div>
+</div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=900,H=600;
+let state='menu',mode=0,startMode=0,gameMode='base';
+function pickGameMode(m){gameMode=m;['waves','base','eternal'].forEach((g,i)=>document.getElementById('gm'+i).classList.toggle('sel',g===m));refreshResumeBtn();const sb=document.getElementById('shopBtn');if(sb&&state!=='playing')sb.textContent='🛒 SHOP [B]';}
+let jets=[],bullets=[],ebullets=[],enemies=[],parts=[],pickups=[],missiles=[],floaters=[];
+let cash=0,kills=0,wave=1,base=null,beacons=[],spawnT=0,missileCd=0,shake=0,gameT=0;
+let phase='combat',roundBonusGiven=false,eterT=8;
+let selBox=null,selected=new Set(),orderMarker=null;
+let mouse={x:W/2,y:H-100,down:false,rdown:false};
+let keys={};
+let S={dmg:1,rate:1,speed:1,hull:0,missile:0,regen:0,magnet:1};
+let lastRTS=new Set();
+const hudEl={};
+function cacheHud(){['hPilot','hJets','hCash','hWave','hKills','hZones','basefill'].forEach(id=>hudEl[id]=document.getElementById(id));}
+
+const JET_PRICE=n=>Math.round(120*Math.pow(1.35,Math.max(0,n-5)));
+const UPG_MAX=10;
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function cleanName(s){return String(s||'').toUpperCase().replace(/[^A-Z0-9 _-]/g,'').slice(0,16);}
+function menuToast(t){const s=document.getElementById('loginState');if(s)s.textContent='· '+t;}
+const UPG={
+ dmg:{name:'💥 Damage +25%',base:100,desc:'All jets hit harder. Permanent.',lvl:0,fn:()=>S.dmg*=1.25},
+ rate:{name:'🔥 Fire-rate +22%',base:95,desc:'Shoot faster. Permanent.',lvl:0,fn:()=>S.rate*=1.22},
+ hull:{name:'🛡 Hull +30 & repair',base:90,desc:'+30 max HP per jet. Full repair only between rounds.',lvl:0,fn:()=>{S.hull+=30;const fullHeal=state!=='playing'||phase==='inter';jets.forEach(j=>{j.maxhp+=30;j.hp=fullHeal?j.maxhp:Math.min(j.maxhp,j.hp+30);});}},
+ speed:{name:'💨 Engine +12% speed',base:80,desc:'Dodge & reposition faster. Permanent.',lvl:0,fn:()=>S.speed*=1.12},
+ missile:{name:'🚀 Homing missiles',base:200,desc:'Space launches volley. Permanent. No cap.',lvl:0,fn:()=>S.missile++},
+ regen:{name:'✚ Nano-repair shield',base:130,desc:'Regenerate 2 HP/s per level. Permanent.',lvl:0,fn:()=>S.regen+=2},
+ magnet:{name:'🧲 Salvage magnet',base:70,desc:'Bigger pickup range. Permanent.',lvl:0,fn:()=>S.magnet+=0.5},
+};
+const upgCost=k=>Math.round(UPG[k].base*Math.pow(1.7,UPG[k].lvl));
+// ---- pilots + leaderboard (localStorage, this device only; session persists unless logout) ----
+let currentPilot='GUEST',currentEmail='';
+const PILOTS_KEY='jetSquadronPilotsV1',BOARD_KEY='jetSquadronBoardV1',CUR_KEY='jetSquadronCurrentV1';
+function pilotRecs(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(PILOTS_KEY)||'[]');
+    if(Array.isArray(raw)&&raw.length&&typeof raw[0]==='string')return raw.map(n=>({name:cleanName(n)||'GUEST',email:''}));
+    if(Array.isArray(raw))return raw.filter(r=>r&&r.name).map(r=>({name:cleanName(r.name)||'GUEST',email:String(r.email||'').slice(0,64)}));
+    return [];
+  }catch(e){return[];}
+}
+function saveRecs(recs){try{localStorage.setItem(PILOTS_KEY,JSON.stringify(recs.slice(0,24)));}catch(e){}}
+function pilots(){return pilotRecs().map(r=>r.name);}
+function savePilots(p){const recs=pilotRecs();const emails={};recs.forEach(r=>emails[r.name]=r.email);saveRecs(p.map(n=>({name:String(n).toUpperCase(),email:emails[String(n).toUpperCase()]||''})));}
+function pilotEmail(name){const r=pilotRecs().find(x=>x.name===String(name||'').toUpperCase());return r?r.email:'';}
+function metaKeyFor(name){return 'jetSquadronMetaV1_'+String(name||'GUEST').toUpperCase();}
+function saveMeta(){if(currentPilot==='GUEST')return;try{const o={};for(const k in UPG)o[k]=Math.max(0,Math.min(UPG_MAX,UPG[k].lvl|0));localStorage.setItem(metaKeyFor(currentPilot),JSON.stringify(o));}catch(e){}}
+function loadMeta(){try{
+  if(currentPilot==='GUEST'){for(const k in UPG)UPG[k].lvl=0;recalcStats();return;}
+  const per=JSON.parse(localStorage.getItem(metaKeyFor(currentPilot))||'null');
+  if(per&&typeof per==='object'){for(const k in UPG)UPG[k].lvl=Number.isFinite(per[k])?Math.max(0,Math.min(UPG_MAX,per[k]|0)):0;return;}
+  const legacy=JSON.parse(localStorage.getItem('jetSquadronMetaV1')||'null'); // migrate old global save
+  if(legacy&&typeof legacy==='object'){for(const k in UPG)UPG[k].lvl=Number.isFinite(legacy[k])?Math.max(0,Math.min(UPG_MAX,legacy[k]|0)):0;saveMeta();return;}
+  for(const k in UPG)UPG[k].lvl=0;
+}catch(e){for(const k in UPG)UPG[k].lvl=0;}}
+function recalcStats(){S={dmg:Math.pow(1.25,UPG.dmg.lvl),rate:Math.pow(1.22,UPG.rate.lvl),speed:Math.pow(1.12,UPG.speed.lvl),hull:30*UPG.hull.lvl,missile:UPG.missile.lvl,regen:2*UPG.regen.lvl,magnet:1+0.5*UPG.magnet.lvl};}
+function resetMeta(){for(const k in UPG)UPG[k].lvl=0;recalcStats();saveMeta();renderShop();updateUpgBar();updateMenuUpg();}
+function setLoggedInUI(){
+  const st=document.getElementById('loginState');
+  if(st)st.textContent=currentPilot==='GUEST'?'· GUEST (not logged in)':'· '+currentPilot;
+  const lia=document.getElementById('loggedInAs');
+  if(lia)lia.textContent=currentPilot==='GUEST'?'Logged in as GUEST (log in to save your pilot)':'Logged in as '+currentPilot+(currentEmail?' <'+currentEmail+'>':'');
+  const hp=hudEl.hPilot||document.getElementById('hPilot');
+  if(hp)hp.textContent=currentPilot;
+  const mp=document.getElementById('menuUpgPilot');if(mp)mp.textContent=currentPilot;
+}
+function loginPilot(){
+  const inp=document.getElementById('pilotName'),em=document.getElementById('pilotEmail');
+  const name=cleanName((inp.value||'').trim())||'GUEST';
+  const email=(em.value||'').trim().slice(0,64);
+  if(name!=='GUEST'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){if(state==='menu')menuToast('Enter a valid email to log in');else toast('Enter a valid email to log in');if(em)em.focus();return;}
+  let recs=pilotRecs();
+  const ix=recs.findIndex(r=>r.name===name);
+  if(ix>=0){if(email)recs[ix].email=email;}
+  else recs.push({name,email:name==='GUEST'?'':email});
+  saveRecs(recs);
+  currentPilot=name;currentEmail=name==='GUEST'?'':(email||pilotEmail(name));
+  try{localStorage.setItem(CUR_KEY,JSON.stringify({name:currentPilot,email:currentEmail}));}catch(e){}
+  loadMeta();recalcStats();updateUpgBar();updateMenuUpg();renderPilots();renderBoard();setLoggedInUI();refreshResumeBtn();
+  if(state==='menu')menuToast('Logged in as '+name+' ✈');else toast('Logged in as '+name+' ✈');
+}
+function logoutPilot(){
+  currentPilot='GUEST';currentEmail='';
+  try{localStorage.removeItem(CUR_KEY);}catch(e){}
+  const em=document.getElementById('pilotEmail');if(em)em.value='';
+  loadMeta();recalcStats();updateUpgBar();updateMenuUpg();renderPilots();renderBoard();setLoggedInUI();refreshResumeBtn();
+  if(state==='menu')menuToast('Logged out — now GUEST');else toast('Logged out — now GUEST');
+}
+function renderPilots(){
+  const row=document.getElementById('pilotRow');if(!row)return;
+  setLoggedInUI();
+  const recs=pilotRecs();row.innerHTML='';
+  const names=['GUEST',...recs.map(r=>r.name)];
+  [...new Set(names)].slice(0,12).forEach(n=>{
+    const b=document.createElement('button');b.className='smbtn'+(n===currentPilot?' active':'');
+    const em=n==='GUEST'?'':pilotEmail(n);
+    b.textContent=(n===currentPilot?'● ':'○ ')+n;
+    b.title=em||n;
+    if(n===currentPilot){b.style.borderColor='#0f8';b.style.color='#0f8';}
+    b.onclick=()=>{const i=document.getElementById('pilotName');if(i)i.value=n;const e=document.getElementById('pilotEmail');if(e)e.value=pilotEmail(n);if(n==='GUEST'){logoutPilot();}else{loginPilot();}};
+    row.appendChild(b);
+  });
+}
+function board(){try{return JSON.parse(localStorage.getItem(BOARD_KEY)||'[]');}catch(e){return[];}}
+function bestPerPilot(){
+  const m=new Map();
+  for(const r of board()){
+    const k=String(r.name||'GUEST').toUpperCase();
+    const cur=m.get(k);
+    const score=(x)=>(x.won?1e9:0)+x.round*1e6+x.kills*1e3-Math.min(9999,x.time);
+    if(!cur||score(r)>score(cur.best)){cur?cur.best=r:(m.set(k,{name:k,best:r,games:0}),m.get(k).best=r);}
+  }
+  for(const r of board()){const k=String(r.name||'GUEST').toUpperCase();if(m.has(k))m.get(k).games++;}
+  return [...m.values()].sort((a,b)=>((b.best.won-a.best.won)||(b.best.round-a.best.round)||(b.best.kills-a.best.kills)||(a.best.time-b.best.time))).slice(0,10);
+}
+function recordResult(won){
+  if(recordResult._done)return;recordResult._done=true;
+  try{
+    const b=board();
+    b.push({name:currentPilot,won:!!won,round:wave,kills,time:Math.round(gameT),mode:gameMode,date:Date.now()});
+    b.sort((a,c)=>(c.won-a.won)||(c.round-a.round)||(c.kills-a.kills)||(a.time-c.time));
+    localStorage.setItem(BOARD_KEY,JSON.stringify(b.slice(0,100)));
+  }catch(e){}
+  renderBoard();
+}
+function boardRow(r,i){
+  const modeTag={waves:'🌊',base:'💥',eternal:'♾'}[r.mode]||'💥';
+  const best=r.won?'🏆 WIN':'⭐ R'+r.round;
+  return `<tr><td>${i+1}</td><td style="color:#0ff">${esc(String(r.name).slice(0,12))}</td><td>${best}</td><td style="text-align:center">${modeTag}</td><td class="sc">${r.kills}</td><td style="text-align:right">${r.time}s</td></tr>`;
+}
+function renderBoard(){
+  const el=document.getElementById('boardTable');if(!el)return;
+  const rows=bestPerPilot();
+  if(!rows.length){el.innerHTML='<p class="dim">No sorties logged yet. Fly, Commander!</p>';return;}
+  const byMode={waves:[],base:[],eternal:[]};
+  rows.forEach(p=>{(byMode[p.best.mode]||byMode.base).push(p);});
+  const titles={waves:'🌊 WAVES',base:'💥 BASE DESTROY',eternal:'♾ ETERNAL'};
+  let h='';
+  for(const m of ['waves','base','eternal']){
+    if(!byMode[m].length)continue;
+    h+=`<p class="dim" style="margin:8px 0 2px">${titles[m]} — best per pilot</p><table><tr><th>#</th><th>Pilot</th><th>Best</th><th>Mode</th><th>Kills</th><th>Time</th></tr>`;
+    byMode[m].forEach((p,i)=>{h+=boardRow({...p.best,name:p.name},i);});
+    h+='</table>';
+  }
+  el.innerHTML=h;
+}
+function updateMenuUpg(){
+  const el=document.getElementById('menuUpg');if(!el)return;
+  const mp=document.getElementById('menuUpgPilot');if(mp)mp.textContent=currentPilot;
+  el.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+Object.entries(UPG).map(([k,u])=>`<span style="background:#1c1c3a;border:1px solid #33335a;border-radius:8px;padding:4px 10px;font-size:12px" title="${u.desc}">${u.name.split(' ')[0]} <b style="color:#ff0">Lv${u.lvl}</b> <span style="color:#667">→$${upgCost(k)}</span></span>`).join('')+'</div>';
+}
+try{
+  const cur=JSON.parse(localStorage.getItem(CUR_KEY)||'null');
+  if(cur&&cur.name){currentPilot=cleanName(cur.name)||'GUEST';currentEmail=String(cur.email||'').slice(0,64);}
+  else{const leg=localStorage.getItem(CUR_KEY);if(leg&&leg[0]!=='{'){currentPilot=cleanName(leg)||'GUEST';currentEmail=pilotEmail(currentPilot);}}
+}catch(e){}
+loadMeta();recalcStats();
+
+function pickStartMode(m){startMode=m;['p0','p1','p2'].forEach((id,i)=>{const e=document.getElementById(id);if(e)e.classList.toggle('sel',i===m);});}
+let aliveCount=()=>jets.filter(j=>!j.dead).length;
+function pruneSelection(){for(const i of [...selected]){if(!jets[i]||jets[i].dead)selected.delete(i);}}
+function setMode(m){
+  if(state==='playing'){
+    if(mode===2&&m!==2)lastRTS=new Set([...selected].filter(i=>jets[i]&&!jets[i].dead));
+  }
+  mode=m;[0,1,2].forEach(i=>document.getElementById('m'+i).classList.toggle('active',i===m));
+  selBox=null;mouse.down=false;pruneSelection();
+  if(m!==2){selected=new Set(jets.flatMap((j,i)=>j.dead?[]:[i]));}
+  else if(lastRTS.size)selected=new Set([...lastRTS].filter(i=>jets[i]&&!jets[i].dead));
+  if(state==='playing')toast(['Leader-follow: fly the gold leader','Formation: squad follows mouse','RTS: drag-select, right-click to order'][m]);
+}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2200);}
+
+function startGame(){
+  // ensure a pilot is logged in (default GUEST)
+  try{if(!localStorage.getItem(CUR_KEY)&&currentPilot!=='GUEST'){localStorage.setItem(CUR_KEY,JSON.stringify({name:currentPilot,email:currentEmail}));}}catch(e){}
+  recordResult._done=false;pendingSave=null;
+  document.getElementById('overlay').style.display='none';
+  document.body.style.overflow='';
+  cacheHud();
+  resetGame();
+  mode=startMode;
+  // set active button without toast spam, then select all
+  [0,1,2].forEach(i=>document.getElementById('m'+i).classList.toggle('active',i===mode));
+  selected=new Set(jets.map((_,i)=>i));
+  selBox=null;mouse.down=false;
+  state='playing';
+  last=performance.now();
+  requestAnimationFrame(loop);
+}
+const SAVE_SLOTS=[1,2,3,4];
+function saveKey(){return 'jetSquadronSave_'+currentPilot+'_'+gameMode;} // legacy single-slot (migrated)
+function savesKey(){return 'jetSquadronSaves_'+currentPilot;}
+function autoKey(mode){return 'jetSquadronAuto_'+currentPilot+'_'+(mode||gameMode);}
+function slotKey(){return 'jetSquadronSlot_'+currentPilot;}
+let pendingSave=null,currentSlot=1;
+try{currentSlot=Math.max(1,Math.min(4,parseInt(localStorage.getItem(slotKey())||'1',10)||1));}catch(e){currentSlot=1;}
+function getSaves(){try{const o=JSON.parse(localStorage.getItem(savesKey())||'{}');return (o&&typeof o==='object')?o:{};}catch(e){return{};}}
+function setSaves(o){try{localStorage.setItem(savesKey(),JSON.stringify(o));}catch(e){}}
+function migrateLegacySave(){
+  // one-time: move old single-slot saves into slot 1
+  try{
+    const have=getSaves();if(have[1]&&have[1].wave>0)return;
+    for(const m of ['waves','base','eternal']){
+      const c=JSON.parse(localStorage.getItem('jetSquadronSave_'+currentPilot+'_'+m)||'null');
+      if(c&&c.wave>0){have[1]=c;setSaves(have);localStorage.removeItem('jetSquadronSave_'+currentPilot+'_'+m);break;}
+    }
+  }catch(e){}
+}
+function slotSummary(s){
+  if(!s||!(s.wave>0))return 'empty';
+  const d=s.date?new Date(s.date):null;
+  const when=d?(' · '+d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})):'';
+  return `${s.mode} wave ${s.wave} · ${s.jets.length} jets · $${s.cash} · ${s.kills} kills${when}`;
+}
+function collectSave(){
+  return {v:1,mode:gameMode,wave,cash:Math.floor(cash),kills,gameT:Math.round(gameT),
+    jets:jets.filter(j=>!j.dead).map(j=>({hp:Math.round(j.hp),maxhp:j.maxhp})),
+    beacons:beacons.map(b=>({owner:b.owner,gotBonus:b.gotBonus})),date:Date.now()};
+}
+function saveRun(loud){
+  // silent path = AUTOSAVE (own slot, never touches manual slots)
+  if(state!=='playing'){if(loud)toast('Nothing to save — launch first');return false;}
+  try{localStorage.setItem(autoKey(),JSON.stringify(collectSave()));}catch(e){if(loud)toast('Save failed (storage full?)');return false;}
+  refreshSavesUI();
+  return true;
+}
+function saveToSlot(i,loud){
+  if(state!=='playing'){if(loud!==false)toast('Nothing to save — launch first');return false;}
+  const o=getSaves();o[i]=collectSave();setSaves(o);
+  currentSlot=i;try{localStorage.setItem(slotKey(),String(i));}catch(e){}
+  refreshSavesUI();renderSaveModal();
+  if(loud!==false)toast(`💾 Saved to slot ${i} — wave ${wave} ✈`);
+  return true;
+}
+function openSaveModal(){
+  if(state!=='playing'){toast('Nothing to save — launch first');return;}
+  renderSaveModal();
+  document.getElementById('saveModal').style.display='flex';
+  paused=true;
+}
+function closeSaveModal(){
+  document.getElementById('saveModal').style.display='none';
+  if(state==='playing'&&!document.getElementById('shopModal')?.style.display?.includes('flex'))paused=false;
+}
+function renderSaveModal(){
+  const g=document.getElementById('saveGrid');if(!g)return;g.innerHTML='';
+  const o=getSaves();
+  for(const i of SAVE_SLOTS){
+    const b=document.createElement('button');b.className='buy';
+    b.innerHTML=`<b>💾 SLOT ${i}${i===currentSlot?' ●':''}</b><small>${esc(slotSummary(o[i]))}</small>`;
+    b.onclick=()=>{saveToSlot(i,true);};
+    g.appendChild(b);
+  }
+}
+function stopRun(){
+  if(state==='playing'){const o=getSaves();o[currentSlot]=collectSave();setSaves(o);}
+  location.reload(); // back to menu; session + saves persist
+}
+function clearSave(){ // run over: clear autosave; manual slots are player checkpoints, keep them
+  try{for(const m of ['waves','base','eternal'])localStorage.removeItem(autoKey(m));}catch(e){}
+  pendingSave=null;refreshSavesUI();
+}
+function clearSlot(i){const o=getSaves();delete o[i];setSaves(o);refreshSavesUI();}
+function refreshResumeBtn(){refreshSavesUI();}
+function allRunSaves(){
+  const out=[];
+  const o=getSaves();
+  for(const i of SAVE_SLOTS)if(o[i]&&o[i].wave>0)out.push({slot:i,kind:'manual',s:o[i]});
+  for(const m of ['waves','base','eternal']){
+    try{
+      const c=JSON.parse(localStorage.getItem(autoKey(m))||'null');
+      if(c&&c.wave>0)out.push({slot:0,kind:'auto',s:c});
+    }catch(e){}
+  }
+  out.sort((a,b)=>(b.s.date||0)-(a.s.date||0));
+  return out;
+}
+function refreshSavesUI(){
+  migrateLegacySave();
+  const b=document.getElementById('resumeBtn');
+  const list=document.getElementById('savesList');
+  const sp=document.getElementById('savesPilot');if(sp)sp.textContent=currentPilot;
+  const runs=allRunSaves();
+  if(b){
+    const pick=runs.find(r=>r.s.mode===gameMode)||runs[0];
+    if(pick){
+      b.style.display='inline-block';
+      b.textContent=`▶ RESUME ${currentPilot} — ${pick.s.mode} WAVE ${pick.s.wave} (${pick.s.jets.length} jets, $${pick.s.cash})${pick.kind==='auto'?' [auto]':''} — slot ${pick.kind==='auto'?'auto':pick.slot}`;
+      b.onclick=()=>resumeGame(pick.kind==='auto'?'auto':pick.slot);
+      if(pick.s.mode!==gameMode)pickGameMode(pick.s.mode);
+    }else b.style.display='none';
+  }
+  if(list){
+    if(!runs.length){list.innerHTML='<p class="dim">No saves yet. Autosave kicks in 10s into a run — or SAVE/STOP any time.</p>';return;}
+    list.innerHTML='';
+    for(const r of runs.slice(0,8)){
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap';
+      row.innerHTML=`<span class="dim" style="flex:1;min-width:180px"><b style="color:#0ff">${r.kind==='auto'?'AUTO':'SLOT '+r.slot}</b> · ${esc(r.s.mode)} wave ${r.s.wave} · ${r.s.jets.length} jets · $${r.s.cash} · ${r.s.kills} kills</span>`;
+      const lb=document.createElement('button');lb.className='smbtn';lb.textContent='LOAD';
+      lb.onclick=()=>resumeGame(r.kind==='auto'?'auto':r.slot);
+      const db=document.createElement('button');db.className='smbtn';db.textContent='✕';db.title='Delete save';
+      db.onclick=()=>{if(r.kind==='auto'){try{localStorage.removeItem(autoKey(r.s.mode));}catch(e){}}else clearSlot(r.slot);};
+      row.appendChild(lb);row.appendChild(db);
+      list.appendChild(row);
+    }
+  }
+}
+function loadRunSave(which){
+  if(which==='auto'){
+    for(const m of ['waves','base','eternal']){
+      try{
+        const c=JSON.parse(localStorage.getItem(autoKey(m))||'null');
+        if(c&&c.wave>0&&c.mode===gameMode)return c;
+      }catch(e){}
+    }
+    const runs=allRunSaves().filter(r=>r.kind==='auto');
+    return runs.length?runs[0].s:null;
+  }
+  const o=getSaves();
+  if(typeof which==='number'&&o[which]&&o[which].wave>0){currentSlot=which;try{localStorage.setItem(slotKey(),String(which));}catch(e){}return o[which];}
+  const runs=allRunSaves().filter(r=>r.kind==='manual');
+  if(runs.length){currentSlot=runs[0].slot;return runs[0].s;}
+  return null;
+}
+function resumeGame(which){
+  let s=loadRunSave(which ?? currentSlot);
+  if(!s){toast('No save for '+currentPilot);return;}
+  if(s.mode)gameMode=s.mode;
+  recordResult._done=false;pendingSave=s;
+  document.getElementById('overlay').style.display='none';
+  document.body.style.overflow='';
+  cacheHud();
+  resetGame();
+  // restore snapshot over the fresh run, then spawn the saved wave fresh
+  wave=s.wave;cash=s.cash;kills=s.kills;gameT=s.gameT||0;
+  const want=Math.max(0,Math.min(200,s.jets.length));
+  while(aliveCount()<want)addJet();
+  jets.forEach((j,i)=>{const sv=s.jets[i];if(sv){j.maxhp=sv.maxhp;j.hp=Math.min(sv.maxhp,Math.max(1,sv.hp));}});
+  (s.beacons||[]).forEach((sb,i)=>{if(beacons[i]){beacons[i].owner=sb.owner?1:0;beacons[i].gotBonus=!!sb.gotBonus;}});
+  mode=startMode;
+  [0,1,2].forEach(i=>document.getElementById('m'+i).classList.toggle('active',i===mode));
+  selected=new Set(jets.flatMap((j,i)=>j.dead?[]:[i]));
+  selBox=null;mouse.down=false;
+  state='playing';phase='combat';roundBonusGiven=false;
+  pendingSave=null;
+  last=performance.now();
+  requestAnimationFrame(loop);
+  toast('Resumed — wave '+wave+' ✈');
+}
+function resetGame(){
+  jets=[];bullets=[];ebullets=[];enemies=[];parts=[];pickups=[];missiles=[];floaters=[];
+  cash=220;kills=0;wave=1;gameT=0;spawnT=2;missileCd=0;eterT=8;
+  phase='combat';roundBonusGiven=false;
+  recalcStats(); // permanent upgrades persist across runs
+  for(let i=0;i<5;i++)addJet(true);
+  if(gameMode==='waves')base=null;
+  else makeBase(gameMode==='eternal'?4000:2600);
+  beacons=[
+    {x:130,y:300,r:34,owner:0,hold:0,gotBonus:false,label:'WEST'},
+    {x:W-130,y:300,r:34,owner:0,hold:0,gotBonus:false,label:'EAST'}
+  ];
+  selected=new Set(jets.map((_,i)=>i));lastRTS=new Set();selBox=null;mouse.down=false;
+  const bb=document.getElementById('basebar');if(bb)bb.style.display=base?'block':'none';
+  if(hudEl.basefill)hudEl.basefill.style.width='100%';
+  updateUpgBar();updateMenuUpg();
+  const sb=document.getElementById('shopBtn');if(sb)sb.textContent=gameMode==='eternal'?'🛒 SHOP [B]':'🛒 SHOP [B] · between rounds';
+  spawnWave(); // round 1 starts immediately (all modes)
+}
+function addJet(){
+  // NO CAP: unlimited jets. Reuse dead slots, else append.
+  const deadIdx=jets.findIndex(j=>j.dead);
+  if(deadIdx>=0){
+    const s=formationSlot(deadIdx,jets.length);
+    mKFallback(deadIdx,s);return true;
+  }
+  const i=jets.length;
+  const s=formationSlot(i,jets.length+1);
+  const gy=Math.min(H-60,H-90+s.y);
+  const j={x:W/2+s.x,y:gy,tx:W/2+s.x,ty:gy,hp:100+S.hull,maxhp:100+S.hull,cd:Math.random()*.4,leader:i===0,dead:false,shield:1.5};
+  jets.push(j);
+  if(mode===2)selected.add(jets.length-1);
+  else selected=new Set(jets.flatMap((q,k)=>q.dead?[]:[k]));
+  return true;
+}
+function mKFallback(idx,s){
+  // revive dead jet in place with spawn shield
+  const j=jets[idx];
+  const gy=Math.min(H-60,H-90+s.y);
+  Object.assign(j,{x:W/2+s.x,y:gy,tx:W/2+s.x,ty:gy,hp:100+S.hull,maxhp:100+S.hull,cd:.3,dead:false,shield:2.5});
+  if(mode===2)selected.add(idx);
+  return j;
+}
+function formationSlot(i,n){
+  if(i===0)return{x:0,y:0};
+  // grid for unlimited jets, clamped on-screen: 7 per row
+  const COLS=7,idx=i-1;
+  const col=(idx%COLS)-(COLS-1)/2,row=Math.floor(idx/COLS);
+  return{x:Math.max(-W/2+40,Math.min(W/2-40,col*40)),y:30+Math.min(row,8)*34};
+}
+function isWaveCount(){let c=0;for(const e of enemies)if(!e.dead&&e.isWave)c++;return c;}
+function float(t,x,y,c){floaters.push({t,x,y,c:c||'#ff0',life:1.4});}
+
+// ---- spawning ----
+function spawnWave(){
+  if(gameMode==='eternal'){
+    const live=isWaveCount();
+    if(live>70)return; // cap live wave enemies in eternal
+  }
+  const n=Math.min(gameMode==='eternal'?24:30,3+wave*2);
+  const hpScale=1+Math.min(8,wave*.14);
+  for(let i=0;i<n;i++){
+    const kind=Math.random();
+    let e;
+    if(kind<.55)e={type:'fighter',x:Math.random()*W,y:-20-Math.random()*120,hp:(30+wave*8)*hpScale,maxhp:(30+wave*8)*hpScale,sp:Math.min(220,60+wave*4+Math.random()*40),cd:1+Math.random(),fire:1.6,cash:12+wave*3,r:12};
+    else if(kind<.85)e={type:'gunship',x:Math.random()*W,y:-30-Math.random()*160,hp:(90+wave*20)*hpScale,maxhp:(90+wave*20)*hpScale,sp:32+Math.random()*20,cd:2,fire:2.4,cash:30+wave*6,r:17};
+    else e={type:'kamikaze',x:Math.random()*W,y:-20,hp:20+wave*5,maxhp:20+wave*5,sp:Math.min(260,130+wave*5),cd:0,fire:99,cash:15+wave*3,r:10};
+    e.t=Math.random()*10;e.isWave=true;
+    enemies.push(e);
+  }
+  float('ROUND '+wave+' — CLEAR ALL WAVE JETS!',W/2,200,'#f0f');
+}
+function baseSpawn(){
+  if(!base||base.dead)return;
+  const side=Math.random()<.5?-1:1;
+  const e={type:'fighter',x:base.x+side*110,y:base.y+40,hp:30+wave*8,maxhp:30+wave*8,sp:80+wave*4,cd:1,fire:1.8,cash:12+wave*3,r:12,t:0,isWave:false};
+  enemies.push(e);
+}
+
+// ---- shop (waves/base: BETWEEN ROUNDS ONLY; eternal: anytime. upgrades permanent, jets unlimited) ----
+let paused=false;
+function shopLocked(){return state==='playing'&&gameMode!=='eternal'&&phase==='combat';}
+function toggleShop(open){
+  if(state!=='playing')return;
+  const m=document.getElementById('shopModal');
+  const show=open===undefined?m.style.display==='none':open;
+  if(show&&shopLocked()){toast(gameMode==='eternal'?'Shop opening…':'Shop opens BETWEEN rounds — clear the wave!');if(gameMode!=='eternal')return;}
+  m.style.display=show?'flex':'none';
+  if(show)renderShop();
+  paused=show&&state==='playing';
+}
+function onShopClose(){
+  // during intermission (waves/base), closing = start next round
+  if(state==='playing'&&phase==='inter'&&gameMode!=='eternal'){nextRound();return;}
+  toggleShop(false);
+}
+function nextRound(){
+  if(state!=='playing')return;
+  if(gameMode==='eternal')return;
+  toggleShop(false);
+  phase='combat';roundBonusGiven=false;
+  wave++;
+  spawnWave();
+}
+function makeBase(hp){
+  base={x:W/2,y:64,w:200,h:56,hp:hp,maxhp:hp,turrets:[{dx:-80,cd:0},{dx:0,cd:1},{dx:80,cd:2}],spawnCd:4,flash:0,dead:false};
+}
+function renderShop(){
+  updateUpgBar();updateMenuUpg();
+  document.getElementById('sCash').textContent='$'+Math.floor(cash);
+  const ph=document.getElementById('shopPhase');
+  const nb=document.getElementById('nextRoundBtn');
+  const cb=document.getElementById('shopCloseBtn');
+  const isInter=state==='playing'&&phase==='inter'&&gameMode!=='eternal';
+  if(ph)ph.textContent=isInter?`— ROUND ${wave} CLEARED`:(gameMode==='eternal'?'— ETERNAL (pauses game)':'');
+  if(nb)nb.style.display=isInter?'block':'none';
+  if(nb)nb.textContent=`▶ START ROUND ${wave+1}`;
+  if(cb)cb.textContent=isInter?'▶ START [B]':'CLOSE [B]';
+  const g=document.getElementById('shopGrid');g.innerHTML='';
+  const alive=aliveCount();
+  const jb=document.createElement('button');jb.className='buy';
+  {const p=JET_PRICE(Math.max(5,alive));jb.disabled=state==='playing'&&cash<p;jb.innerHTML=`<b>✈ NEW JET — $${p}</b><small>No limit! You have ${alive} jets. More jets = more DPS. Permanent.</small>`;jb.onclick=()=>{if(state==='playing'&&cash<p)return;if(state==='playing')cash-=p;if(addJet()){if(mode!==2)selected=new Set(jets.flatMap((j,i)=>j.dead?[]:[i]));sfx(660);saveMeta();renderShop();toast('New jet joined! ✈ ('+aliveCount()+')');}};}
+  g.appendChild(jb);
+  for(const k in UPG){
+    const c=upgCost(k),u=UPG[k],b=document.createElement('button');b.className='buy';
+    const maxed=u.lvl>=UPG_MAX;b.disabled=maxed||(state==='playing'&&cash<c);
+    b.innerHTML=`<b>${u.name} — ${maxed?'MAX':('$'+c)}</b><small>${u.desc} · Lv ${u.lvl}/${UPG_MAX} (forever)</small>`;
+    b.onclick=()=>{if(u.lvl>=UPG_MAX){toast('Upgrade maxed!');return;}if(state==='playing'&&cash<c)return;if(state==='playing')cash-=c;u.lvl=Math.min(UPG_MAX,u.lvl+1);u.fn();saveMeta();sfx(520+u.lvl*60);renderShop();};
+    g.appendChild(b);
+  }
+  document.getElementById('shopInfo').textContent=(gameMode==='eternal'?`ETERNAL: shop anytime (game pauses). Upgrades PERMANENT + saved (max Lv${UPG_MAX}). Jets NO LIMIT. Base respawns stronger. Beacons ($3/s) + 🪂 = free jets!`:`Upgrades are PERMANENT (saved forever, even after defeat; max Lv${UPG_MAX}). Buy between rounds. Jets have NO LIMIT. Beacons ($3/s each) + pilot rescues give FREE jets — always grab 🪂!`)+(currentPilot==='GUEST'?' GUEST upgrades reset on reload — log in to keep them.':'');
+}
+
+// ---- input ----
+addEventListener('keydown',e=>{
+  const tag=e.target&&e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'){if(e.key==='Enter'&&state==='menu')loginPilot();return;}
+  if(e.key.toLowerCase()==='b'){
+    if(state!=='playing')return;
+    if(phase==='inter'&&gameMode!=='eternal'){onShopClose();}else{toggleShop();}
+    return;
+  }
+  if(state==='menu'){
+    if(e.key==='1')pickStartMode(0);if(e.key==='2')pickStartMode(1);if(e.key==='3')pickStartMode(2);
+    return;
+  }
+  if(state!=='playing')return;
+  keys[e.key.toLowerCase()]=true;
+  if(e.key==='1')setMode(0);if(e.key==='2')setMode(1);if(e.key==='3')setMode(2);
+  if(e.code==='Space'){fireMissiles();e.preventDefault();}
+});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+addEventListener('beforeunload',()=>{if(state==='playing'){try{localStorage.setItem(saveKey(),JSON.stringify(collectSave()));}catch(e){}}});
+addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')saveRun(false);});
+function evPos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+function touchPos(t){const r=cv.getBoundingClientRect();return{x:(t.clientX-r.left)*W/r.width,y:(t.clientY-r.top)*H/r.height};}
+cv.addEventListener('mousemove',e=>{const p=evPos(e);mouse.x=p.x;mouse.y=p.y;if(selBox&&mode===2){selBox.x1=p.x;selBox.y1=p.y;}});
+cv.addEventListener('mousedown',e=>{
+  if(e.button!==0&&e.button!==2)return;
+  const p=evPos(e);mouse.x=p.x;mouse.y=p.y;
+  if(e.button===2){if(mode===2){const live=[...selected].filter(i=>jets[i]&&!jets[i].dead);if(live.length)orderSelected(p.x,p.y);else toast('No live jets selected');}return;}
+  if(mode===2){mouse.down=true;selBox={x0:p.x,y0:p.y,x1:p.x,y1:p.y};}
+  else{mouse.down=true;}
+});
+addEventListener('mouseup',e=>{
+  if(state!=='playing'){selBox=null;mouse.down=false;return;}
+  if(selBox&&mode===2){
+    try{const p=evPos(e);selBox.x1=p.x;selBox.y1=p.y;}catch(_){}
+    const x0=Math.min(selBox.x0,selBox.x1),x1=Math.max(selBox.x0,selBox.x1);
+    const y0=Math.min(selBox.y0,selBox.y1),y1=Math.max(selBox.y0,selBox.y1);
+    if(Math.hypot(x1-x0,y1-y0)<8){const live=[...selected].filter(i=>jets[i]&&!jets[i].dead);if(live.length)orderSelected(selBox.x1,selBox.y1);else toast('Tap-drag a box to select jets');}
+    else{selected.clear();jets.forEach((j,i)=>{if(!j.dead&&j.x>x0-10&&j.x<x1+10&&j.y>y0-10&&j.y<y1+10)selected.add(i);});if(selected.size)toast(selected.size+' jets selected');else toast('No jets in box — try a bigger drag');}
+    selBox=null;
+  }
+  mouse.down=false;
+});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('touchstart',e=>{const p=touchPos(e.touches[0]);mouse.x=p.x;mouse.y=p.y;mouse.down=true;if(mode===2&&!selBox)selBox={x0:p.x,y0:p.y,x1:p.x,y1:p.y};},{passive:true});
+cv.addEventListener('touchmove',e=>{const p=touchPos(e.touches[0]);mouse.x=p.x;mouse.y=p.y;if(selBox&&mode===2){selBox.x1=p.x;selBox.y1=p.y;}},{passive:true});
+cv.addEventListener('touchend',e=>{
+  if(selBox&&mode===2){
+    const x0=Math.min(selBox.x0,selBox.x1),x1=Math.max(selBox.x0,selBox.x1);
+    const y0=Math.min(selBox.y0,selBox.y1),y1=Math.max(selBox.y0,selBox.y1);
+    if(Math.hypot(x1-x0,y1-y0)<10){const live=[...selected].filter(i=>jets[i]&&!jets[i].dead);if(live.length)orderSelected(selBox.x1,selBox.y1);else toast('Tap-drag a box to select jets');}
+    else{selected.clear();jets.forEach((j,i)=>{if(!j.dead&&j.x>x0-14&&j.x<x1+14&&j.y>y0-14&&j.y<y1+14)selected.add(i);});toast(selected.size?selected.size+' jets selected':'No jets in box');}
+    selBox=null;
+  }
+  mouse.down=false;
+});
+cv.addEventListener('touchcancel',()=>{mouse.down=false;selBox=null;});
+function liveSelected(){return [...selected].filter(i=>jets[i]&&!jets[i].dead);}
+function orderSelected(x,y){
+  const arr=liveSelected();
+  if(!arr.length){toast('No live jets to order');return;}
+  const r=arr.length>1?Math.min(160,34*Math.sqrt(arr.length)):0;
+  arr.forEach((idx,k)=>{
+    const j=jets[idx];
+    const a=(k/arr.length)*Math.PI*2;
+    j.tx=Math.max(15,Math.min(W-15,x+Math.cos(a)*r));j.ty=Math.max(120,Math.min(H-15,y+Math.sin(a)*r));
+  });
+  orderMarker={x,y,life:.6};sfx(440);
+}
+function fireMissiles(){
+  if(S.missile<=0){const now=performance.now();if(!fireMissiles._t||now-fireMissiles._t>1200){fireMissiles._t=now;toast('Buy 🚀 missiles in shop first! [B]');}return;}
+  if(missileCd>0||state!=='playing'||paused)return;
+  const alive=jets.filter(j=>!j.dead);
+  if(!alive.length)return;
+  missileCd=2.2;
+  let n=0;const MAXM=Math.min(400,alive.length*Math.max(1,S.missile));
+  for(const j of alive){for(let k=0;k<S.missile;k++){missiles.push({x:j.x,y:j.y-10,vx:(Math.random()-.5)*120,vy:-380,t:0,dmg:45*S.dmg});n++;if(n>=MAXM)break;}if(n>=MAXM)break;}
+  sfx(180);shake=Math.min(8,shake+3);
+}
+
+// ---- audio ----
+let AC=null;
+function sfx(f){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=f;o.type='square';g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+.15);o.stop(AC.currentTime+.16);}catch(e){}}
+
+// ---- update ----
+let last=0;
+function loop(t){
+  if(state!=='playing')return;
+  requestAnimationFrame(loop);
+  let dt;
+  try{
+    dt=Math.min(.033,(t-last)/1000||.016);last=t;
+    if(!paused)update(dt);
+    draw();
+  }catch(err){if(!loop._e||t-loop._e>2000){loop._e=t;console.error(err);}}
+}
+function update(dt){
+  gameT+=dt;missileCd=Math.max(0,missileCd-dt);shake=Math.max(0,shake-dt*20);
+  if(base&&base.flash>0)base.flash-=dt;
+  pruneSelection();
+  // ROUNDS (waves/base): combat until all wave enemies dead -> intermission shop. ETERNAL: endless timer spawns, shop anytime.
+  if(gameMode==='eternal'){
+    eterT-=dt;
+    if(eterT<=0){wave++;spawnWave();eterT=Math.max(5,13-wave*.4);}
+    if(base&&!base.dead){base.spawnCd-=dt;if(base.spawnCd<=0&&base.hp>0){baseSpawn();base.spawnCd=Math.max(1,3-wave*.1);}}
+  }else if(phase==='combat'&&!(base&&base.dead)){
+    const waveLeft=enemies.some(e=>!e.dead&&e.isWave);
+    if(!waveLeft&&gameT>2&&!roundBonusGiven){
+      roundBonusGiven=true;phase='inter';
+      const bonus=60+wave*20;cash+=bonus;
+      float(`ROUND ${wave} CLEARED +$${bonus}`,W/2,H/2,'#0f8');
+      sfx(990);
+      // clear leftover base fighters + stray bullets so shop break is clean
+      enemies.forEach(e=>{if(!e.isWave&&!e.dead){explode(e.x,Math.max(0,e.y),8,'#888');e.dead=true;}});
+      enemies=enemies.filter(e=>!e.dead);ebullets.length=0;
+      saveRun(false); // autosave: snapshot the cleared round
+      setTimeout(()=>{if(state==='playing'&&phase==='inter'&&gameMode!=='eternal')toggleShop(true);},600);
+    }
+    if(base&&!base.dead){base.spawnCd-=dt;if(base.spawnCd<=0&&base.hp>0){baseSpawn();base.spawnCd=Math.max(1.2,3.5-wave*.12);}}
+  }
+  spawnT-=dt;if(spawnT<=0){ // ambient cash salvage drone
+    spawnT=7+Math.random()*5;
+    pickups.push({type:'cash',x:Math.random()*(W-60)+30,y:-15,vy:60,val:15+wave*4,t:0});
+  }
+  // --- player movement per mode ---
+  const spd=260*S.speed;
+  let kx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
+  let ky=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
+  if(mode===0){
+    const L=jets.find(j=>!j.dead&&j.leader)||jets.find(j=>!j.dead);
+    if(L){jets.forEach(j=>j.leader=(j===L));
+      if(kx||ky){L.x+=kx*spd*dt;L.y+=ky*spd*dt;}
+      else if(mouse.down){const dx=mouse.x-L.x,dy=mouse.y-L.y,d=Math.hypot(dx,dy);if(d>6){L.x+=dx/d*Math.min(spd,d*6)*dt;L.y+=dy/d*Math.min(spd,d*6)*dt;}}
+      L.x=Math.max(15,Math.min(W-15,L.x));L.y=Math.max(110,Math.min(H-12,L.y));
+      L.tx=L.x;L.ty=L.y;
+      // followers spring to formation slots around leader
+      const alive=jets.filter(j=>!j.dead);
+      for(let fi=0;fi<alive.length;fi++){
+        const j=alive[fi];
+        if(j===L)continue;
+        const s=formationSlot(fi,alive.length);
+        const gx=L.x+s.x,gy=L.y+s.y;
+        j.x+=(gx-j.x)*Math.min(1,dt*5);j.y+=(gy-j.y)*Math.min(1,dt*5);
+        j.tx=j.x;j.ty=j.y;
+      }
+    }
+  }else if(mode===1){
+    let cx=0,cy=0,n=0;jets.forEach(j=>{if(!j.dead){cx+=j.x;cy+=j.y;n++;}});
+    if(n){cx/=n;cy/=n;
+      let gx=mouse.down?mouse.x:cx+kx*120,gy=mouse.down?mouse.y:cy+ky*120;
+      if(kx||ky){gx=cx+kx*160*dt*4;gy=cy+ky*160*dt*4;}
+      const dx=gx-cx,dy=gy-cy,d=Math.hypot(dx,dy);
+      const alive=jets.filter(j=>!j.dead);
+      alive.forEach((j,i)=>{const s=formationSlot(i,alive.length);j.tx=Math.max(15,Math.min(W-15,cx+dx*Math.min(1,dt*6)+s.x));j.ty=Math.max(110,Math.min(H-12,cy+dy*Math.min(1,dt*6)+s.y));j.x+=(j.tx-j.x)*Math.min(1,dt*8);j.y+=(j.ty-j.y)*Math.min(1,dt*8);});
+    }
+  }else{
+    // RTS: keyboard nudges selected, else they fly to tx,ty
+    jets.forEach((j,i)=>{
+      if(j.dead)return;
+      if(selected.has(i)&&(kx||ky)){j.tx=Math.max(15,Math.min(W-15,j.tx+kx*spd*dt));j.ty=Math.max(110,Math.min(H-12,j.ty+ky*spd*dt));}
+      const dx=j.tx-j.x,dy=j.ty-j.y,d=Math.hypot(dx,dy);
+      if(d>3){const v=Math.min(spd,d*5);j.x+=dx/d*v*dt;j.y+=dy/d*v*dt;}
+    });
+  }
+  // regen + shooting + shield
+  jets.forEach(j=>{
+    if(j.dead)return;
+    if(j.shield>0)j.shield-=dt;
+    if(S.regen>0)j.hp=Math.min(j.maxhp,j.hp+S.regen*dt);
+    j.cd-=dt;
+    if(j.cd<=0){
+      j.cd=(0.32/S.rate)*(0.85+Math.random()*.3);
+      if(bullets.length<600){bullets.push({x:j.x-6,y:j.y-12,vx:0,vy:-520,dmg:10*S.dmg});bullets.push({x:j.x+6,y:j.y-12,vx:0,vy:-520,dmg:10*S.dmg});}
+      else j.cd=0.1;
+    }
+  });
+  // bullets
+  bullets.forEach(b=>{b.y+=b.vy*dt;});
+  bullets=bullets.filter(b=>b.y>-20);
+  ebullets.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;});
+  ebullets=ebullets.filter(b=>b.y<H+20&&b.y>-40&&b.x>-20&&b.x<W+20);
+  // missiles homing
+  missiles.forEach(m=>{
+    m.t+=dt;
+    let best=null,bd=1e9;
+    enemies.forEach(e=>{const d=(e.x-m.x)**2+(e.y-m.y)**2;if(d<bd){bd=d;best=e;}});
+    if(base&&base.hp>0){const d=(base.x-m.x)**2+(base.y-m.y)**2;if(d<bd){bd=d;best=base;}}
+    if(best){const dx=best.x-m.x,dy=best.y-m.y,d=Math.hypot(dx,dy)||1;m.vx+=(dx/d*700-m.vx)*dt*3;m.vy+=(dy/d*700-m.vy)*dt*3;}
+    m.x+=m.vx*dt;m.y+=m.vy*dt;
+    if(Math.random()<.4)parts.push({x:m.x,y:m.y,vx:0,vy:30,life:.4,c:'#fa0',r:2});
+  });
+  missiles=missiles.filter(m=>m.y>-40&&m.y<H+20&&m.x>-20&&m.x<W+20&&m.t<4);
+  // enemies AI
+  enemies.forEach(e=>{
+    e.t+=dt;
+    if(e.type==='fighter'){
+      const tgt=nearestJet(e.x,e.y);
+      if(tgt){const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt*.7+20*dt;}
+      else e.y+=e.sp*dt;
+      e.cd-=dt;if(e.cd<=0&&e.y>0&&e.y<H&&phase==='combat'){e.cd=e.fire;const t2=nearestJet(e.x,e.y);if(t2){const dx=t2.x-e.x,dy=t2.y-e.y,d=Math.hypot(dx,dy)||1;ebullets.push({x:e.x,y:e.y+10,vx:dx/d*180,vy:dy/d*180+60,dmg:8+wave});}}
+    }else if(e.type==='gunship'){
+      e.y+=e.sp*dt*.5;e.x+=Math.sin(e.t*1.5)*40*dt;
+      e.cd-=dt;if(e.cd<=0&&e.y>0&&phase==='combat'){e.cd=e.fire;for(let a=-1;a<=1;a++)ebullets.push({x:e.x,y:e.y+12,vx:a*90,vy:170,dmg:12+wave});}
+    }else{ // kamikaze
+      const tgt=nearestJet(e.x,e.y);
+      if(tgt){const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;}
+      else e.y+=e.sp*dt;
+    }
+    if(e.y>H+30){e.gone=true;}
+  });
+  // base turrets (silent during intermission break, except eternal which never rests)
+  if(base&&base.hp>0&&(phase==='combat'||gameMode==='eternal')){
+    base.turrets.forEach(tr=>{
+      tr.cd-=dt;
+      if(tr.cd<=0){tr.cd=2.2;const t=nearestJet(base.x+tr.dx,base.y);if(t){const dx=t.x-(base.x+tr.dx),dy=t.y-base.y,d=Math.hypot(dx,dy)||1;ebullets.push({x:base.x+tr.dx,y:base.y+28,vx:dx/d*200,vy:dy/d*200,dmg:10+wave});}}
+    });
+  }
+  // collisions: player bullets vs enemies/base
+  for(const b of bullets){
+    let hit=false;
+    for(const e of enemies){
+      if(e.dead)continue;
+      if(Math.hypot(e.x-b.x,e.y-b.y)<e.r+4){e.hp-=b.dmg;b.y=-999;hit=true;explode(e.x,e.y,2,'#0ff');break;}
+    }
+    if(!hit&&base&&base.hp>0&&b.x>base.x-base.w/2&&b.x<base.x+base.w/2&&b.y>base.y-base.h/2&&b.y<base.y+base.h/2){
+      base.hp-=b.dmg;base.flash=.1;b.y=-999;explode(b.x,b.y,2,'#f0f');
+    }
+  }
+  bullets=bullets.filter(b=>b.y>-50);
+  // missiles vs all
+  for(const m of missiles){
+    let boom=false;
+    for(const e of enemies){if(!e.dead&&Math.hypot(e.x-m.x,e.y-m.y)<e.r+8){e.hp-=m.dmg;boom=true;break;}}
+    if(!boom&&base&&base.hp>0&&Math.abs(m.x-base.x)<base.w/2+8&&Math.abs(m.y-base.y)<base.h/2+8){base.hp-=m.dmg;base.flash=.15;boom=true;}
+    if(boom){explode(m.x,m.y,14,'#fa0');m.t=99;}
+  }
+  missiles=missiles.filter(m=>m.t<4);
+  // enemies dying (single-roll drops: 14% pilot / 26% cash / 5% heal)
+  enemies.forEach(e=>{
+    if(e.hp<=0&&!e.dead){
+      e.dead=true;kills++;cash+=e.cash;float('+$'+Math.round(e.cash),e.x,e.y,'#ff0');
+      explode(e.x,e.y,18,e.type==='kamikaze'?'#f33':'#fa0');sfx(220);shake=Math.min(6,shake+1.5);
+      const roll=Math.random();
+      if(roll<.14)pickups.push({type:'pilot',x:e.x,y:e.y,vy:50,t:0});
+      else if(roll<.40)pickups.push({type:'cash',x:e.x,y:e.y,vy:70,val:e.cash*.6,t:0});
+      else if(roll<.45)pickups.push({type:'heal',x:e.x,y:e.y,vy:60,t:0});
+    }
+  });
+  enemies=enemies.filter(e=>!e.dead&&!e.gone);
+  // kamikaze crash pays half bounty (intentional: ramming is costly)
+  for(const j of jets){
+    if(j.dead||j.shield>0)continue;
+    for(const e of enemies){
+      if(e.type==='kamikaze'&&!e.dead&&Math.hypot(j.x-e.x,j.y-e.y)<18){j.hp-=25+wave*2;e.hp=0;e.dead=true;kills++;const bounty=Math.round(e.cash/2);cash+=bounty;float('+$'+bounty+' RAM!',e.x,e.y,'#ff0');explode(e.x,e.y,16,'#f33');if(j.hp<=0){j.dead=true;explode(j.x,j.y,26,'#f33');}}
+    }
+  }
+  enemies=enemies.filter(e=>!e.dead&&!e.gone);
+  if(base&&base.hp<=0&&!base.dead){
+    base.dead=true;base.hp=0;explode(base.x,base.y,120,'#f0f');explode(base.x-60,base.y,60,'#fa0');explode(base.x+60,base.y,60,'#0ff');
+    shake=12;sfx(90);cash+=500;
+    if(gameMode==='eternal'){
+      float('BASE DOWN +$500 — REBUILDS STRONGER!',W/2,120,'#0f8');
+      const nh=Math.round(base.maxhp*1.5);
+      setTimeout(()=>{if(state==='playing'&&gameMode==='eternal'){makeBase(nh);float('⚠ NEW BASE HP '+nh,W/2,120,'#f33');}},4000);
+    }else{
+      setTimeout(()=>victory(),1200);
+    }
+  }
+  // enemy bullets vs jets (shielded jets immune)
+  for(const b of ebullets){
+    for(const j of jets){
+      if(j.dead||j.shield>0)continue;
+      if(Math.hypot(j.x-b.x,j.y-b.y)<13){j.hp-=b.dmg;b.x=9999;explode(j.x,j.y,4,'#f33');if(j.hp<=0){j.dead=true;explode(j.x,j.y,26,'#f33');float('JET DOWN!',j.x,j.y,'#f33');shake=6;sfx(140);}break;}
+    }
+  }
+  ebullets=ebullets.filter(b=>b.x<9000);
+  // jets vs base collision damage (ramming, shield protects)
+  if(base&&base.hp>0){
+    jets.forEach(j=>{if(!j.dead&&j.shield<=0&&Math.abs(j.x-base.x)<base.w/2+10&&Math.abs(j.y-base.y)<base.h/2+10){j.hp-=60*dt;base.hp-=25*dt;base.flash=.05;if(j.hp<=0){j.dead=true;explode(j.x,j.y,26,'#f33');}}});
+  }
+  // pickups
+  const magR=70*S.magnet;
+  pickups.forEach(p=>{
+    p.t+=dt;p.y+=p.vy*dt;
+    const j=nearestJet(p.x,p.y,magR+60);
+    if(j){const dx=j.x-p.x,dy=j.y-p.y,d=Math.hypot(dx,dy)||1;if(d<magR){p.x+=dx/d*220*dt;p.y+=dy/d*220*dt;}}
+    const j2=nearestJet(p.x,p.y,22);
+    if(j2){
+      p.got=true;
+      if(p.type==='cash'){cash+=p.val;float('+$'+Math.round(p.val),p.x,p.y,'#ff0');sfx(880);}
+      else if(p.type==='heal'){jets.forEach(q=>{if(!q.dead)q.hp=Math.min(q.maxhp,q.hp+25);});float('+REPAIR',p.x,p.y,'#0f8');sfx(660);}
+      else if(p.type==='pilot'){addJet();float('+1 JET! ✈',p.x,p.y,'#0f8');toast('Pilot rescued — +1 jet! ✈ ('+aliveCount()+')');sfx(990);}
+    }
+    if(p.y>H+20)p.gone=true;
+  });
+  pickups=pickups.filter(p=>!p.got&&!p.gone);
+  // beacons capture
+  let zones=0;
+  beacons.forEach(bc=>{
+    const inside=jets.some(j=>!j.dead&&Math.hypot(j.x-bc.x,j.y-bc.y)<bc.r);
+    const enemyInside=enemies.some(e=>!e.dead&&Math.hypot(e.x-bc.x,e.y-bc.y)<bc.r);
+    if(inside&&!enemyInside){bc.hold+=dt;if(bc.hold>2.5&&bc.owner!==1){bc.owner=1;bc.hold=0;cash+=50;float('ZONE CAPTURED +$50',bc.x,bc.y-40,'#c8f');sfx(770);if(!bc.gotBonus){bc.gotBonus=true;addJet();toast('Beacon bonus: FREE JET! ✈ ('+aliveCount()+')');}}}
+    else bc.hold=Math.max(0,bc.hold-dt*2);
+    if(bc.owner===1){cash+=3*dt;zones++;bc.pulse=(bc.pulse||0)+dt;}
+  });
+  // parts/floaters
+  parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;});
+  parts=parts.filter(p=>p.life>0);
+  floaters.forEach(f=>{f.y-=30*dt;f.life-=dt;});
+  floaters=floaters.filter(f=>f.life>0);
+  if(orderMarker){orderMarker.life-=dt;if(orderMarker.life<=0)orderMarker=null;}
+  // wipe check: price scales with alive fleet, dead slots reused with shield
+  const aliveN=aliveCount();
+  if(aliveN===0){
+    if(gameMode!=='eternal'&&base&&base.dead){victory();return;}
+    const p=JET_PRICE(Math.max(5,jets.length));
+    if(cash>=p){
+      cash-=p;
+      if(addJet()){
+        const nj=jets.find(j=>!j.dead);
+        if(nj){nj.x=W/2;nj.y=H-60;nj.tx=W/2;nj.ty=H-60;nj.shield=3;ebullets.length=0;}
+        pruneSelection();
+        const idx=jets.findIndex(j=>!j.dead);
+        if(idx>=0)selected=new Set([idx]);
+        toast('Emergency rebuild -$'+p);
+      }else{cash+=p;defeat();return;}
+    }
+    else{defeat();return;}
+  }
+  // HUD (cached refs) + upgrade strip (throttled) + autosave every 10s
+  if(!update._ub||gameT-update._ub>0.5){update._ub=gameT;updateUpgBar();}
+  if(!update._as||gameT-update._as>10){update._as=gameT;if(state==='playing')saveRun(false);}
+  update._wl=isWaveCount();
+  if(!update._pr||kills!==update._prK){update._pr=gameT;update._prK=kills;pruneSelection();}
+  if(hudEl.hJets){
+    if(hudEl.hPilot)hudEl.hPilot.textContent=currentPilot;
+    hudEl.hJets.textContent=aliveN+'/'+jets.length;
+    hudEl.hCash.textContent='$'+Math.floor(cash);
+    hudEl.hWave.textContent=wave;
+    hudEl.hKills.textContent=kills;
+    hudEl.hZones.textContent=zones+'/2';
+    if(base&&hudEl.basefill)hudEl.basefill.style.width=(100*Math.max(0,base.hp/base.maxhp))+'%';
+  }else{
+    const hp0=document.getElementById('hPilot');if(hp0)hp0.textContent=currentPilot;
+    document.getElementById('hJets').textContent=aliveN+'/'+jets.length;
+    document.getElementById('hCash').textContent='$'+Math.floor(cash);
+    document.getElementById('hWave').textContent=wave;
+    document.getElementById('hKills').textContent=kills;
+    document.getElementById('hZones').textContent=zones+'/2';
+    if(base)document.getElementById('basefill').style.width=(100*Math.max(0,base.hp/base.maxhp))+'%';
+  }
+}
+function nearestJet(x,y,maxD){
+  // fixed: compare squared distances (maxD was linear, matched ~sqrt px before)
+  let best=null,bd=(maxD!=null?maxD*maxD:1e18);
+  for(const j of jets){if(j.dead)continue;const d=(j.x-x)*(j.x-x)+(j.y-y)*(j.y-y);if(d<bd){bd=d;best=j;}}
+  return best;
+}
+function shortUpgName(n){return n.replace(/^[^\s]+\s/,'');}
+function updateUpgBar(){
+  const el=document.getElementById('upgbar');if(!el)return;
+  const parts=[`💥${UPG.dmg.lvl}`,`🔥${UPG.rate.lvl}`,`🛡${UPG.hull.lvl}`,`💨${UPG.speed.lvl}`,`🚀${UPG.missile.lvl}`,`✚${UPG.regen.lvl}`,`🧲${UPG.magnet.lvl}`];
+  el.innerHTML='UPGRADES &nbsp;'+parts.map(s=>`<span style="background:#14142a;border:1px solid #33335a;border-radius:8px;padding:2px 8px" title="press B to buy (between rounds, anytime in eternal)">${s}</span>`).join(' ')+` <span style="color:#667">— press B to buy</span>`;
+}
+function updateMenuUpg(){
+  const el=document.getElementById('menuUpg');if(!el)return;
+  const mp=document.getElementById('menuUpgPilot');if(mp)mp.textContent=currentPilot;
+  el.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+Object.entries(UPG).map(([k,u])=>`<span style="background:#1c1c3a;border:1px solid #33335a;border-radius:8px;padding:4px 10px;font-size:12px" title="${u.desc}">${u.name} <b style="color:#ff0">Lv${u.lvl}/${UPG_MAX}</b> <span style="color:#667">→$${u.lvl>=UPG_MAX?'MAX':upgCost(k)}</span></span>`).join('')+'</div>'+(currentPilot==='GUEST'?'<p class="dim" style="margin-top:6px">GUEST upgrades last this session only — log in to save them forever.</p>':'');
+}
+function explode(x,y,n,c){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=40+Math.random()*160;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4+Math.random()*.5,c,r:1+Math.random()*3});}}
+
+function boardHTML(){
+  const rows=bestPerPilot().slice(0,5);
+  if(!rows.length)return '<p class="dim">First logged sortie!</p>';
+  let h='<table style="width:100%"><tr><th>#</th><th>Pilot</th><th>Best</th><th>Mode</th><th>Kills</th><th>Time</th></tr>';
+  rows.forEach((p,i)=>{h+=boardRow({...p.best,name:p.name},i);});
+  return h+'</table>';
+}
+function victory(){
+  if(state!=='playing')return;state='over';paused=false;
+  clearSave();recordResult(true);
+  document.getElementById('shopModal').style.display='none';
+  document.getElementById('overlay').style.display='block';
+  document.body.style.overflow='';
+  document.getElementById('panel').innerHTML=`<h1 style="color:#0f8">🏆 BASE DESTROYED!</h1><h2>PILOT ${esc(currentPilot)} · VICTORY · ${gameT.toFixed(0)}S · ${kills} KILLS</h2>
+  <div class="card"><h3>⭐ AFTER-ACTION REPORT</h3><p>Jets fielded: <b>${aliveCount()}</b> · Rounds cleared: <b>${wave}</b> · Kills: <b>${kills}</b> · Zones held: <b>${beacons.filter(b=>b.owner===1).length}/2</b></p>
+  <p>Upgrades are PERMANENT and saved to ${esc(currentPilot)} — DMG ×${S.dmg.toFixed(2)} · Rate ×${S.rate.toFixed(2)} · Missiles Lv${S.missile} · Hull +${S.hull}</p></div>
+  <div class="card"><h3>🏆 LEADERBOARD</h3><div class="board">${boardHTML()}</div></div>
+  <button class="bigbtn" onclick="location.reload()">↻ FLY AGAIN (upgrades kept!)</button>`;
+}
+function defeat(){
+  if(state!=='playing')return;
+  if(gameMode!=='eternal'&&base&&base.dead){victory();return;}
+  state='over';paused=false;
+  clearSave();recordResult(false);
+  document.getElementById('shopModal').style.display='none';
+  document.getElementById('overlay').style.display='block';
+  document.body.style.overflow='';
+  document.getElementById('panel').innerHTML=`<h1 style="color:#f33">💥 SQUADRON LOST</h1><h2>PILOT ${esc(currentPilot)} · ${({waves:'WAVE',base:'ROUND',eternal:'WAVE'})[gameMode]||'ROUND'} ${wave} · ${kills} KILLS · ${gameT.toFixed(0)}S</h2>
+  <div class="card"><h3>📋 DEBRIEF</h3><p>${base?`The swarm overwhelmed you — but the base still stands at <b>${Math.round(100*base.hp/base.maxhp)}% HP</b>.`:`The swarm overwhelmed you at wave ${wave}.`}</p><p>Your upgrades are <b>PERMANENT and saved to ${esc(currentPilot)}</b> — retry stronger! Tip: Hull + Missiles early, capture beacons, use RTS mode (3) to flank.</p></div>
+  <div class="card"><h3>🏆 LEADERBOARD — BEST PER PILOT</h3><div class="board">${boardHTML()}</div></div>
+  <button class="bigbtn" onclick="location.reload()">↻ RETRY (upgrades kept!)</button>`;
+}
+
+// ---- draw ----
+function draw(){
+  // gold leader = current live leader (mode 0 follows L, so highlight it)
+  const goldJ=jets.find(j=>!j.dead&&j.leader)||jets.find(j=>!j.dead);
+  ctx.save();
+  if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  // bg
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#120a2e');g.addColorStop(.5,'#0a0a1e');g.addColorStop(1,'#06121e');
+  ctx.fillStyle=g;ctx.fillRect(-20,-20,W+40,H+40);
+  // stars/grid
+  ctx.strokeStyle='#ffffff08';ctx.lineWidth=1;
+  for(let y=(gameT*30)%40;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  ctx.fillStyle='#fff';
+  for(let i=0;i<60;i++){const sx=(i*137)%W,sy=(i*89+gameT*20)%H;ctx.globalAlpha=.2+.3*Math.abs(Math.sin(i+gameT));ctx.fillRect(sx,sy,2,2);}
+  ctx.globalAlpha=1;
+  // beacons
+  beacons.forEach(bc=>{
+    ctx.strokeStyle=bc.owner===1?'#0f8':'#c8f';ctx.lineWidth=2;
+    ctx.setLineDash([8,6]);ctx.beginPath();ctx.arc(bc.x,bc.y,bc.r+Math.sin(gameT*3)*3,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=bc.owner===1?'#0f82':'#c8f2';ctx.beginPath();ctx.arc(bc.x,bc.y,bc.r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=bc.owner===1?'#0f8':'#c8f';ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('🚩',bc.x,bc.y+7);
+    ctx.font='11px Orbitron';ctx.fillText(bc.label+' '+(bc.owner===1?'✓ +$3/s':bc.hold>0?'…'+Math.round((2.5-bc.hold)*10)/10:''),bc.x,bc.y-bc.r-8);
+  });
+  // base
+  if(base&&!base.dead){
+    ctx.fillStyle=base.flash>0?'#fff':'#2a0a2e';
+    ctx.strokeStyle='#f0f';ctx.lineWidth=3;
+    ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(base.x-base.w/2,base.y-base.h/2,base.w,base.h,8);
+    else ctx.rect(base.x-base.w/2,base.y-base.h/2,base.w,base.h);
+    ctx.fill();ctx.stroke();
+    ctx.fillStyle='#f0f';ctx.font='bold 15px Orbitron';ctx.textAlign='center';ctx.fillText('◈ ENEMY BASE ◈',base.x,base.y+2);
+    ctx.fillStyle='#f33';ctx.fillRect(base.x-base.w/2+8,base.y+12, (base.w-16)*Math.max(0,base.hp/base.maxhp),6);
+    base.turrets.forEach(tr=>{
+      const tx=base.x+tr.dx,ty=base.y+base.h/2;
+      ctx.fillStyle='#f33';ctx.strokeStyle='#f0f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(tx,ty,12,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#ff0';ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx,ty+18);ctx.stroke();
+    });
+  }else if(base){
+    ctx.fillStyle='#f0f3';ctx.font='bold 20px Orbitron';ctx.textAlign='center';ctx.fillText('☠ BASE DESTROYED ☠',base.x,base.y);
+  }
+  // pickups
+  pickups.forEach(p=>{
+    ctx.font='20px sans-serif';ctx.textAlign='center';
+    const bob=Math.sin(p.t*5)*3;
+    if(p.type==='cash'){ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(p.x,p.y+bob,9,0,Math.PI*2);ctx.fill();ctx.fillStyle='#000';ctx.font='bold 11px sans-serif';ctx.fillText('$',p.x,p.y+bob+4);}
+    else if(p.type==='heal'){ctx.fillStyle='#0f8';ctx.fillRect(p.x-9,p.y-9+bob,18,18);ctx.fillStyle='#000';ctx.font='bold 13px sans-serif';ctx.fillText('+',p.x,p.y+5+bob);}
+    else{ctx.fillText('🪂',p.x,p.y+bob);}
+  });
+  // enemies
+  enemies.forEach(e=>{
+    ctx.save();ctx.translate(e.x,e.y);
+    if(e.type==='fighter'){ctx.fillStyle='#f33';ctx.strokeStyle='#f88';}
+    else if(e.type==='gunship'){ctx.fillStyle='#a0f';ctx.strokeStyle='#caf';}
+    else{ctx.fillStyle='#ff5e00';ctx.strokeStyle='#ff0';}
+    ctx.lineWidth=2;
+    const r=e.r;
+    ctx.beginPath();ctx.moveTo(0,r);ctx.lineTo(-r,-r*.6);ctx.lineTo(0,-r*.2);ctx.lineTo(r,-r*.6);ctx.closePath();ctx.fill();ctx.stroke();
+    // hp
+    ctx.fillStyle='#000a';ctx.fillRect(-r,-r-9,r*2,4);
+    ctx.fillStyle='#f33';ctx.fillRect(-r,-r-9,r*2*Math.max(0,e.hp/e.maxhp),4);
+    ctx.restore();
+  });
+  // ebullets (no shadowBlur — perf hotspot, flat looks same at this size)
+  ebullets.forEach(b=>{ctx.fillStyle='#f55';ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();});
+  // jets
+  jets.forEach((j,i)=>{
+    if(j.dead)return;
+    const sel=mode===2&&selected.has(i);
+    if(sel){ctx.strokeStyle='#ff0';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(j.x,j.y,18+Math.sin(gameT*6)*2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+    if(j.shield>0){ctx.strokeStyle='#0ff';ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(j.x,j.y,20,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+    // engine flame
+    ctx.fillStyle='#0ff8';ctx.beginPath();ctx.moveTo(j.x-4,j.y+10);ctx.lineTo(j.x,j.y+18+Math.random()*8);ctx.lineTo(j.x+4,j.y+10);ctx.fill();
+    ctx.save();ctx.translate(j.x,j.y);
+    ctx.fillStyle=(j===goldJ&&mode===0)?'#fc0':'#0cf';ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(-10,10);ctx.lineTo(0,5);ctx.lineTo(10,10);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.restore();
+    // hp bar
+    ctx.fillStyle='#000a';ctx.fillRect(j.x-12,j.y-22,24,4);
+    ctx.fillStyle=j.hp/j.maxhp>.5?'#0f8':j.hp/j.maxhp>.25?'#ff0':'#f33';
+    ctx.fillRect(j.x-12,j.y-22,24*Math.max(0,j.hp/j.maxhp),4);
+  });
+  // bullets / missiles / parts (flat fills, no per-entity shadows)
+  bullets.forEach(b=>{ctx.fillStyle='#0ff';ctx.fillRect(b.x-2,b.y-8,4,10);});
+  missiles.forEach(m=>{ctx.fillStyle='#fa0';ctx.save();ctx.translate(m.x,m.y);ctx.rotate(Math.atan2(m.vy,m.vx)+Math.PI/2);ctx.fillRect(-3,-8,6,16);ctx.restore();});
+  parts.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;});
+  // RTS selection box + order marker
+  if(selBox){const x=Math.min(selBox.x0,selBox.x1),y=Math.min(selBox.y0,selBox.y1),w=Math.abs(selBox.x1-selBox.x0),h=Math.abs(selBox.y1-selBox.y0);ctx.strokeStyle='#ff0';ctx.setLineDash([5,5]);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);}
+  if(orderMarker){ctx.strokeStyle='#ff0';ctx.lineWidth=2;ctx.beginPath();ctx.arc(orderMarker.x,orderMarker.y,(1-orderMarker.life)*30,0,Math.PI*2);ctx.stroke();}
+  floaters.forEach(f=>{ctx.globalAlpha=Math.min(1,f.life);ctx.fillStyle=f.c;ctx.font='bold 14px Rajdhani,sans-serif';ctx.textAlign='center';ctx.fillText(f.t,f.x,f.y);ctx.globalAlpha=1;});
+  // status bar per mode (count cached in update)
+  ctx.fillStyle='#8af';ctx.font='12px Orbitron';ctx.textAlign='left';
+  const wl=update._wl!=null?update._wl:0;
+  const modeTag={waves:'🌊',base:'💥',eternal:'♾'}[gameMode]||'';
+  ctx.fillText(gameMode==='eternal'?`${modeTag} ETERNAL W${wave}: ${wl} left   [B] SHOP anytime   [SPACE] MSL${S.missile?' Lv'+S.missile:''}`:(phase==='inter'?`SHOP OPEN — buy upg, then START ROUND ${wave+1}`:`${modeTag} ROUND ${wave}: ${wl} jets left   [SPACE] MISSILES${S.missile?' Lv'+S.missile:''}`),10,H-10);
+  ctx.restore();
+}
+// init login + leaderboard UI (restore session: stay logged in unless logout)
+(function(){
+  if(currentPilot!=='GUEST'){
+    const nm=document.getElementById('pilotName');if(nm)nm.value=currentPilot;
+    const em=document.getElementById('pilotEmail');if(em)em.value=currentEmail||pilotEmail(currentPilot);
+  }
+  loadMeta();recalcStats();
+  renderPilots();renderBoard();updateUpgBar();updateMenuUpg();setLoggedInUI();refreshResumeBtn();
+})();
+</script>
+</body>
+</html>
