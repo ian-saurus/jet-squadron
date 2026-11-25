@@ -30,7 +30,9 @@ canvas{display:block;width:900px;max-width:96vw;height:auto;background:#0a0a1e;b
 .card h3{color:#5ee6ff;font-family:Orbitron;font-size:13px;letter-spacing:3px;margin-bottom:8px}
 .card p,.dim{color:#9aa3c0;font-size:14px;line-height:1.6}
 .modepick{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
-@media(max-width:640px){.modepick{grid-template-columns:1fr}}
+#gmRow{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){#gmRow{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.modepick{grid-template-columns:1fr}#gmRow{grid-template-columns:1fr}}
 .pick{background:#1c1c3a;border:2px solid #33335a;border-radius:10px;padding:14px;cursor:pointer;text-align:center}
 .pick:hover,.pick.sel{border-color:#0ff;box-shadow:0 0 16px #0ff5}
 .pick b{font-family:Orbitron;font-size:13px;color:#0ff}
@@ -103,7 +105,9 @@ kbd{background:#222;border:1px solid #555;border-radius:4px;padding:0 5px;font-s
     <div class="pick" id="gm0" onclick="pickGameMode('waves')"><b>🌊 WAVES</b><p>Endless wave rounds, no base. Clear the wave → shop opens between rounds → next wave. Die = run over.</p></div>
     <div class="pick sel" id="gm1" onclick="pickGameMode('base')"><b>💥 BASE DESTROY</b><p>Base + waves. Clear each wave, shop between rounds, destroy the base to win.</p></div>
     <div class="pick" id="gm2" onclick="pickGameMode('eternal')"><b>♾ ETERNAL</b><p>Nonstop swarm + respawning base. Shop anytime in-game (pauses). No rounds — survive for score.</p></div>
+    <div class="pick" id="gm3" onclick="pickGameMode('daily')"><b>📅 DAILY</b><p>Today's seeded run: same waves for everyone. New modifiers every day.</p></div>
   </div>
+  <p class="dim" id="dailyInfo" style="margin-top:6px"></p>
   <p style="margin-top:6px">• Kill enemies → earn <b style="color:#ff0">$ cash</b> + salvage<br>• Grab <b>🪂 ejected pilots</b> to get <b style="color:#0f8">FREE jets (no limit!)</b><br>• Capture <b style="color:#c8f">🚩 beacons</b> for $ income + a free jet on first capture<br>• Upgrades are <b>PERMANENT & SAVED FOREVER</b> per pilot, even after defeat</p>
   </div>
   <div class="card"><h3>⬆️ UPGRADES — <span id="menuUpgPilot" style="color:#0f8">GUEST</span></h3>
@@ -160,7 +164,15 @@ kbd{background:#222;border:1px solid #555;border-radius:4px;padding:0 5px;font-s
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const W=900,H=600;
 let state='menu',mode=0,startMode=0,gameMode='base';
-function pickGameMode(m){gameMode=m;['waves','base','eternal'].forEach((g,i)=>document.getElementById('gm'+i).classList.toggle('sel',g===m));refreshResumeBtn();const sb=document.getElementById('shopBtn');if(sb&&state!=='playing')sb.textContent='🛒 SHOP [B]';}
+let D={spd:1,cash:1,bonus:0,label:''};
+function dailyMods(dateStr){
+  const ds=dateStr||new Date().toISOString().slice(0,10);
+  let h=0;for(const c of ds)h=(h*31+c.charCodeAt(0))|0;h=Math.abs(h);
+  const spd=1+((h>>0)%25)/100, cashM=1+((h>>5)%40)/100, bonus=(h>>11)%2;
+  const names=['SWARM SURGE','HEAVY METAL','SPEED DEMONS','GOLD RUSH','IRON TIDE'];
+  return {spd,cash:cashM,bonus,label:names[h%names.length]+' · '+ds};
+}
+function pickGameMode(m){gameMode=m;['waves','base','eternal','daily'].forEach((g,i)=>document.getElementById('gm'+i).classList.toggle('sel',g===m));refreshResumeBtn();const sb=document.getElementById('shopBtn');if(sb&&state!=='playing')sb.textContent='🛒 SHOP [B]';const di=document.getElementById('dailyInfo');if(di){if(m==='daily'){const d=dailyMods();di.textContent=`📅 TODAY: ${d.label} — enemies +${Math.round((d.spd-1)*100)}% speed, +${Math.round((d.cash-1)*100)}% cash${d.bonus?' +1 bonus jet':''}. Same for everyone today!`;}else di.textContent='';}}
 let jets=[],bullets=[],ebullets=[],enemies=[],parts=[],pickups=[],missiles=[],floaters=[];
 let cash=0,kills=0,wave=1,base=null,beacons=[],spawnT=0,missileCd=0,shake=0,gameT=0;
 let phase='combat',roundBonusGiven=false,eterT=8;
@@ -283,7 +295,7 @@ function recordResult(won){
   renderBoard();
 }
 function boardRow(r,i){
-  const modeTag={waves:'🌊',base:'💥',eternal:'♾'}[r.mode]||'💥';
+  const modeTag={waves:'🌊',base:'💥',eternal:'♾',daily:'📅'}[r.mode]||'💥';
   const best=r.won?'🏆 WIN':'⭐ R'+r.round;
   return `<tr><td>${i+1}</td><td style="color:#0ff">${esc(String(r.name).slice(0,12))}</td><td>${best}</td><td style="text-align:center">${modeTag}</td><td class="sc">${r.kills}</td><td style="text-align:right">${r.time}s</td></tr>`;
 }
@@ -291,11 +303,11 @@ function renderBoard(){
   const el=document.getElementById('boardTable');if(!el)return;
   const rows=bestPerPilot();
   if(!rows.length){el.innerHTML='<p class="dim">No sorties logged yet. Fly, Commander!</p>';return;}
-  const byMode={waves:[],base:[],eternal:[]};
+  const byMode={waves:[],base:[],eternal:[],daily:[]};
   rows.forEach(p=>{(byMode[p.best.mode]||byMode.base).push(p);});
-  const titles={waves:'🌊 WAVES',base:'💥 BASE DESTROY',eternal:'♾ ETERNAL'};
+  const titles={waves:'🌊 WAVES',base:'💥 BASE DESTROY',eternal:'♾ ETERNAL',daily:'📅 DAILY'};
   let h='';
-  for(const m of ['waves','base','eternal']){
+  for(const m of ['waves','base','eternal','daily']){
     if(!byMode[m].length)continue;
     h+=`<p class="dim" style="margin:8px 0 2px">${titles[m]} — best per pilot</p><table><tr><th>#</th><th>Pilot</th><th>Best</th><th>Mode</th><th>Kills</th><th>Time</th></tr>`;
     byMode[m].forEach((p,i)=>{h+=boardRow({...p.best,name:p.name},i);});
@@ -360,7 +372,7 @@ function migrateLegacySave(){
   // one-time: move old single-slot saves into slot 1
   try{
     const have=getSaves();if(have[1]&&have[1].wave>0)return;
-    for(const m of ['waves','base','eternal']){
+    for(const m of ['waves','base','eternal','daily']){
       const c=JSON.parse(localStorage.getItem('jetSquadronSave_'+currentPilot+'_'+m)||'null');
       if(c&&c.wave>0){have[1]=c;setSaves(have);localStorage.removeItem('jetSquadronSave_'+currentPilot+'_'+m);break;}
     }
@@ -373,7 +385,7 @@ function slotSummary(s){
   return `${s.mode} wave ${s.wave} · ${s.jets.length} jets · $${s.cash} · ${s.kills} kills${when}`;
 }
 function collectSave(){
-  return {v:1,mode:gameMode,wave,cash:Math.floor(cash),kills,gameT:Math.round(gameT),
+  return {v:2,mode:gameMode,mods:D,wave,cash:Math.floor(cash),kills,gameT:Math.round(gameT),
     jets:jets.filter(j=>!j.dead).map(j=>({hp:Math.round(j.hp),maxhp:j.maxhp})),
     beacons:beacons.map(b=>({owner:b.owner,gotBonus:b.gotBonus})),date:Date.now()};
 }
@@ -417,7 +429,7 @@ function stopRun(){
   location.reload(); // back to menu; session + saves persist
 }
 function clearSave(){ // run over: clear autosave; manual slots are player checkpoints, keep them
-  try{for(const m of ['waves','base','eternal'])localStorage.removeItem(autoKey(m));}catch(e){}
+  try{for(const m of ['waves','base','eternal','daily']){localStorage.removeItem(autoKey(m));localStorage.removeItem('jetSquadronSave_'+currentPilot+'_'+m);}}catch(e){}
   pendingSave=null;refreshSavesUI();
 }
 function clearSlot(i){const o=getSaves();delete o[i];setSaves(o);refreshSavesUI();}
@@ -426,7 +438,7 @@ function allRunSaves(){
   const out=[];
   const o=getSaves();
   for(const i of SAVE_SLOTS)if(o[i]&&o[i].wave>0)out.push({slot:i,kind:'manual',s:o[i]});
-  for(const m of ['waves','base','eternal']){
+  for(const m of ['waves','base','eternal','daily']){
     try{
       const c=JSON.parse(localStorage.getItem(autoKey(m))||'null');
       if(c&&c.wave>0)out.push({slot:0,kind:'auto',s:c});
@@ -468,7 +480,7 @@ function refreshSavesUI(){
 }
 function loadRunSave(which){
   if(which==='auto'){
-    for(const m of ['waves','base','eternal']){
+    for(const m of ['waves','base','eternal','daily']){
       try{
         const c=JSON.parse(localStorage.getItem(autoKey(m))||'null');
         if(c&&c.wave>0&&c.mode===gameMode)return c;
@@ -487,6 +499,7 @@ function resumeGame(which){
   let s=loadRunSave(which ?? currentSlot);
   if(!s){toast('No save for '+currentPilot);return;}
   if(s.mode)gameMode=s.mode;
+  D=(s.mods&&gameMode==='daily')?s.mods:{spd:1,cash:1,bonus:0,label:''};
   recordResult._done=false;pendingSave=s;
   document.getElementById('overlay').style.display='none';
   document.body.style.overflow='';
@@ -512,9 +525,11 @@ function resetGame(){
   jets=[];bullets=[];ebullets=[];enemies=[];parts=[];pickups=[];missiles=[];floaters=[];
   cash=220;kills=0;wave=1;gameT=0;spawnT=2;missileCd=0;eterT=8;
   phase='combat';roundBonusGiven=false;
+  comboN=0;comboT=0;
+  D=gameMode==='daily'?dailyMods():{spd:1,cash:1,bonus:0,label:''};
   recalcStats(); // permanent upgrades persist across runs
-  for(let i=0;i<5;i++)addJet(true);
-  if(gameMode==='waves')base=null;
+  for(let i=0;i<5+(D.bonus||0);i++)addJet(true);
+  if(gameMode==='waves'||gameMode==='daily')base=null;
   else makeBase(gameMode==='eternal'?4000:2600);
   beacons=[
     {x:130,y:300,r:34,owner:0,hold:0,gotBonus:false,label:'WEST'},
@@ -561,6 +576,8 @@ function formationSlot(i,n){
 function isWaveCount(){let c=0;for(const e of enemies)if(!e.dead&&e.isWave)c++;return c;}
 function float(t,x,y,c){floaters.push({t,x,y,c:c||'#ff0',life:1.4});}
 
+let comboN=0,comboT=0;
+function comboMult(){return 1+Math.min(comboN,20)*0.1;}
 // ---- spawning ----
 function spawnWave(){
   if(gameMode==='eternal'){
@@ -569,14 +586,21 @@ function spawnWave(){
   }
   const n=Math.min(gameMode==='eternal'?24:30,3+wave*2);
   const hpScale=1+Math.min(8,wave*.14);
+  const spdM=D.spd||1;
   for(let i=0;i<n;i++){
     const kind=Math.random();
     let e;
-    if(kind<.55)e={type:'fighter',x:Math.random()*W,y:-20-Math.random()*120,hp:(30+wave*8)*hpScale,maxhp:(30+wave*8)*hpScale,sp:Math.min(220,60+wave*4+Math.random()*40),cd:1+Math.random(),fire:1.6,cash:12+wave*3,r:12};
-    else if(kind<.85)e={type:'gunship',x:Math.random()*W,y:-30-Math.random()*160,hp:(90+wave*20)*hpScale,maxhp:(90+wave*20)*hpScale,sp:32+Math.random()*20,cd:2,fire:2.4,cash:30+wave*6,r:17};
-    else e={type:'kamikaze',x:Math.random()*W,y:-20,hp:20+wave*5,maxhp:20+wave*5,sp:Math.min(260,130+wave*5),cd:0,fire:99,cash:15+wave*3,r:10};
-    e.t=Math.random()*10;e.isWave=true;
+    if(kind<.45)e={type:'fighter',x:Math.random()*W,y:-20-Math.random()*120,hp:(30+wave*8)*hpScale,maxhp:(30+wave*8)*hpScale,sp:Math.min(220,60+wave*4+Math.random()*40)*spdM,cd:1+Math.random(),fire:1.6,cash:12+wave*3,r:12};
+    else if(kind<.70)e={type:'gunship',x:Math.random()*W,y:-30-Math.random()*160,hp:(90+wave*20)*hpScale,maxhp:(90+wave*20)*hpScale,sp:(32+Math.random()*20)*spdM,cd:2,fire:2.4,cash:30+wave*6,r:17};
+    else if(kind<.85)e={type:'sniper',x:Math.random()*W,y:-20,hp:(50+wave*10)*hpScale,maxhp:(50+wave*10)*hpScale,sp:(70+wave*3)*spdM,cd:1.5,fire:1.3,cash:22+wave*4,r:11};
+    else e={type:'kamikaze',x:Math.random()*W,y:-20,hp:20+wave*5,maxhp:20+wave*5,sp:Math.min(260,130+wave*5)*spdM,cd:0,fire:99,cash:15+wave*3,r:10};
+    e.t=Math.random()*10;e.isWave=true;e.flash=0;
     enemies.push(e);
+  }
+  if(wave%5===0&&!enemies.some(e=>!e.dead&&e.type==='dreadnought')){
+    const dhp=(400+wave*60)*hpScale;
+    enemies.push({type:'dreadnought',x:W/2,y:-60,hp:dhp,maxhp:dhp,sp:22,cd:2,fire:2.6,cash:150+wave*15,r:30,t:0,isWave:true,flash:0});
+    float('⚠ DREADNOUGHT — ROUND '+wave+' ⚠',W/2,260,'#f0f');sfx(90);
   }
   float('ROUND '+wave+' — CLEAR ALL WAVE JETS!',W/2,200,'#f0f');
 }
@@ -739,6 +763,7 @@ function loop(t){
 }
 function update(dt){
   gameT+=dt;missileCd=Math.max(0,missileCd-dt);shake=Math.max(0,shake-dt*20);
+  if(comboT>0){comboT-=dt;if(comboT<=0)comboN=0;}
   if(base&&base.flash>0)base.flash-=dt;
   pruneSelection();
   // ROUNDS (waves/base): combat until all wave enemies dead -> intermission shop. ETERNAL: endless timer spawns, shop anytime.
@@ -752,7 +777,7 @@ function update(dt){
       roundBonusGiven=true;phase='inter';
       const bonus=60+wave*20;cash+=bonus;
       float(`ROUND ${wave} CLEARED +$${bonus}`,W/2,H/2,'#0f8');
-      sfx(990);
+      sfx(660);setTimeout(()=>sfx(880),140);
       // clear leftover base fighters + stray bullets so shop break is clean
       enemies.forEach(e=>{if(!e.isWave&&!e.dead){explode(e.x,Math.max(0,e.y),8,'#888');e.dead=true;}});
       enemies=enemies.filter(e=>!e.dead);ebullets.length=0;
@@ -844,12 +869,29 @@ function update(dt){
     }else if(e.type==='gunship'){
       e.y+=e.sp*dt*.5;e.x+=Math.sin(e.t*1.5)*40*dt;
       e.cd-=dt;if(e.cd<=0&&e.y>0&&phase==='combat'){e.cd=e.fire;for(let a=-1;a<=1;a++)ebullets.push({x:e.x,y:e.y+12,vx:a*90,vy:170,dmg:12+wave});}
+    }else if(e.type==='sniper'){
+      const tgt=nearestJet(e.x,e.y);
+      const hy=130+40*Math.sin(e.t*1.1);
+      e.y+=(hy-e.y)*Math.min(1,dt*1.5)+20*dt;
+      if(tgt)e.x+=(tgt.x-e.x)*Math.min(1,dt*.8);
+      else e.y+=e.sp*dt;
+      e.cd-=dt;if(e.cd<=0&&e.y>0&&e.y<H&&phase==='combat'){e.cd=e.fire;const t2=nearestJet(e.x,e.y);if(t2){const dx=t2.x-e.x,dy=t2.y-e.y,d=Math.hypot(dx,dy)||1;ebullets.push({x:e.x,y:e.y+10,vx:dx/d*300,vy:dy/d*300,dmg:10+wave});}}
+    }else if(e.type==='dreadnought'){
+      e.y+= (e.y<120? e.sp*dt : Math.sin(e.t*.8)*20*dt);
+      e.cd-=dt;
+      if(e.cd<=0&&e.y>0&&phase==='combat'){
+        e.cd=e.fire;
+        for(let a=0;a<8;a++){const an=a/8*Math.PI*2+e.t;ebullets.push({x:e.x,y:e.y,vx:Math.cos(an)*150,vy:Math.sin(an)*150+40,dmg:14+wave});}
+        const t2=nearestJet(e.x,e.y);if(t2){const dx=t2.x-e.x,dy=t2.y-e.y,d=Math.hypot(dx,dy)||1;ebullets.push({x:e.x,y:e.y+20,vx:dx/d*220,vy:dy/d*220,dmg:14+wave});}
+        shake=Math.min(6,shake+1);
+      }
     }else{ // kamikaze
       const tgt=nearestJet(e.x,e.y);
       if(tgt){const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;}
       else e.y+=e.sp*dt;
     }
     if(e.y>H+30){e.gone=true;}
+    if(e.flash>0)e.flash-=dt;
   });
   // base turrets (silent during intermission break, except eternal which never rests)
   if(base&&base.hp>0&&(phase==='combat'||gameMode==='eternal')){
@@ -863,7 +905,7 @@ function update(dt){
     let hit=false;
     for(const e of enemies){
       if(e.dead)continue;
-      if(Math.hypot(e.x-b.x,e.y-b.y)<e.r+4){e.hp-=b.dmg;b.y=-999;hit=true;explode(e.x,e.y,2,'#0ff');break;}
+      if(Math.hypot(e.x-b.x,e.y-b.y)<e.r+4){e.hp-=b.dmg;e.flash=.08;b.y=-999;hit=true;explode(e.x,e.y,2,'#0ff');break;}
     }
     if(!hit&&base&&base.hp>0&&b.x>base.x-base.w/2&&b.x<base.x+base.w/2&&b.y>base.y-base.h/2&&b.y<base.y+base.h/2){
       base.hp-=b.dmg;base.flash=.1;b.y=-999;explode(b.x,b.y,2,'#f0f');
@@ -873,7 +915,7 @@ function update(dt){
   // missiles vs all
   for(const m of missiles){
     let boom=false;
-    for(const e of enemies){if(!e.dead&&Math.hypot(e.x-m.x,e.y-m.y)<e.r+8){e.hp-=m.dmg;boom=true;break;}}
+    for(const e of enemies){if(!e.dead&&Math.hypot(e.x-m.x,e.y-m.y)<e.r+8){e.hp-=m.dmg;e.flash=.12;boom=true;break;}}
     if(!boom&&base&&base.hp>0&&Math.abs(m.x-base.x)<base.w/2+8&&Math.abs(m.y-base.y)<base.h/2+8){base.hp-=m.dmg;base.flash=.15;boom=true;}
     if(boom){explode(m.x,m.y,14,'#fa0');m.t=99;}
   }
@@ -881,10 +923,16 @@ function update(dt){
   // enemies dying (single-roll drops: 14% pilot / 26% cash / 5% heal)
   enemies.forEach(e=>{
     if(e.hp<=0&&!e.dead){
-      e.dead=true;kills++;cash+=e.cash;float('+$'+Math.round(e.cash),e.x,e.y,'#ff0');
-      explode(e.x,e.y,18,e.type==='kamikaze'?'#f33':'#fa0');sfx(220);shake=Math.min(6,shake+1.5);
+      e.dead=true;kills++;
+      comboN++;comboT=3;
+      const mult=comboMult()*(D.cash||1);
+      const reward=Math.round(e.cash*mult);
+      cash+=reward;float('+$'+reward,e.x,e.y,comboN>=5?'#0ff':'#ff0');
+      if(comboN===5||comboN===10||comboN===15||comboN===20)float('🔥 COMBO x'+mult.toFixed(1)+'!',W/2,H/2,'#0ff');
+      explode(e.x,e.y,e.type==='dreadnought'?40:18,e.type==='kamikaze'?'#f33':e.type==='dreadnought'?'#f0f':'#fa0');sfx(220);shake=Math.min(6,shake+1.5);
       const roll=Math.random();
-      if(roll<.14)pickups.push({type:'pilot',x:e.x,y:e.y,vy:50,t:0});
+      if(e.type==='dreadnought'){pickups.push({type:'pilot',x:e.x-20,y:e.y,vy:50,t:0});pickups.push({type:'cash',x:e.x+20,y:e.y,vy:60,val:e.cash,t:0});float('DREADNOUGHT DOWN!',W/2,240,'#f0f');}
+      else if(roll<.14)pickups.push({type:'pilot',x:e.x,y:e.y,vy:50,t:0});
       else if(roll<.40)pickups.push({type:'cash',x:e.x,y:e.y,vy:70,val:e.cash*.6,t:0});
       else if(roll<.45)pickups.push({type:'heal',x:e.x,y:e.y,vy:60,t:0});
     }
@@ -900,7 +948,7 @@ function update(dt){
   enemies=enemies.filter(e=>!e.dead&&!e.gone);
   if(base&&base.hp<=0&&!base.dead){
     base.dead=true;base.hp=0;explode(base.x,base.y,120,'#f0f');explode(base.x-60,base.y,60,'#fa0');explode(base.x+60,base.y,60,'#0ff');
-    shake=12;sfx(90);cash+=500;
+    shake=12;sfx(90);setTimeout(()=>sfx(660),160);setTimeout(()=>sfx(880),320);cash+=500;
     if(gameMode==='eternal'){
       float('BASE DOWN +$500 — REBUILDS STRONGER!',W/2,120,'#0f8');
       const nh=Math.round(base.maxhp*1.5);
@@ -1039,7 +1087,7 @@ function defeat(){
   document.getElementById('shopModal').style.display='none';
   document.getElementById('overlay').style.display='block';
   document.body.style.overflow='';
-  document.getElementById('panel').innerHTML=`<h1 style="color:#f33">💥 SQUADRON LOST</h1><h2>PILOT ${esc(currentPilot)} · ${({waves:'WAVE',base:'ROUND',eternal:'WAVE'})[gameMode]||'ROUND'} ${wave} · ${kills} KILLS · ${gameT.toFixed(0)}S</h2>
+  document.getElementById('panel').innerHTML=`<h1 style="color:#f33">💥 SQUADRON LOST</h1><h2>PILOT ${esc(currentPilot)} · ${({waves:'WAVE',base:'ROUND',eternal:'WAVE',daily:'WAVE'})[gameMode]||'ROUND'} ${wave} · ${kills} KILLS · ${gameT.toFixed(0)}S</h2>
   <div class="card"><h3>📋 DEBRIEF</h3><p>${base?`The swarm overwhelmed you — but the base still stands at <b>${Math.round(100*base.hp/base.maxhp)}% HP</b>.`:`The swarm overwhelmed you at wave ${wave}.`}</p><p>Your upgrades are <b>PERMANENT and saved to ${esc(currentPilot)}</b> — retry stronger! Tip: Hull + Missiles early, capture beacons, use RTS mode (3) to flank.</p></div>
   <div class="card"><h3>🏆 LEADERBOARD — BEST PER PILOT</h3><div class="board">${boardHTML()}</div></div>
   <button class="bigbtn" onclick="location.reload()">↻ RETRY (upgrades kept!)</button>`;
@@ -1099,12 +1147,24 @@ function draw(){
   // enemies
   enemies.forEach(e=>{
     ctx.save();ctx.translate(e.x,e.y);
-    if(e.type==='fighter'){ctx.fillStyle='#f33';ctx.strokeStyle='#f88';}
-    else if(e.type==='gunship'){ctx.fillStyle='#a0f';ctx.strokeStyle='#caf';}
-    else{ctx.fillStyle='#ff5e00';ctx.strokeStyle='#ff0';}
-    ctx.lineWidth=2;
+    const flash=e.flash>0;
+    if(e.type==='fighter'){ctx.fillStyle=flash?'#fff':'#f33';ctx.strokeStyle='#f88';}
+    else if(e.type==='gunship'){ctx.fillStyle=flash?'#fff':'#a0f';ctx.strokeStyle='#caf';}
+    else if(e.type==='sniper'){ctx.fillStyle=flash?'#fff':'#0fc';ctx.strokeStyle='#8ff';}
+    else if(e.type==='dreadnought'){ctx.fillStyle=flash?'#fff':'#f0f';ctx.strokeStyle='#ff8';}
+    else{ctx.fillStyle=flash?'#fff':'#ff5e00';ctx.strokeStyle='#ff0';}
+    ctx.lineWidth=e.type==='dreadnought'?3:2;
     const r=e.r;
-    ctx.beginPath();ctx.moveTo(0,r);ctx.lineTo(-r,-r*.6);ctx.lineTo(0,-r*.2);ctx.lineTo(r,-r*.6);ctx.closePath();ctx.fill();ctx.stroke();
+    if(e.type==='dreadnought'){
+      ctx.beginPath();
+      for(let k=0;k<6;k++){const an=k/6*Math.PI*2+e.t*.5;const px=Math.cos(an)*r,py=Math.sin(an)*r;k?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+      ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#000';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('☠',0,6);
+    }else if(e.type==='sniper'){
+      ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r*.8,0);ctx.lineTo(0,r);ctx.lineTo(-r*.8,0);ctx.closePath();ctx.fill();ctx.stroke();
+    }else{
+      ctx.beginPath();ctx.moveTo(0,r);ctx.lineTo(-r,-r*.6);ctx.lineTo(0,-r*.2);ctx.lineTo(r,-r*.6);ctx.closePath();ctx.fill();ctx.stroke();
+    }
     // hp
     ctx.fillStyle='#000a';ctx.fillRect(-r,-r-9,r*2,4);
     ctx.fillStyle='#f33';ctx.fillRect(-r,-r-9,r*2*Math.max(0,e.hp/e.maxhp),4);
@@ -1140,8 +1200,8 @@ function draw(){
   // status bar per mode (count cached in update)
   ctx.fillStyle='#8af';ctx.font='12px Orbitron';ctx.textAlign='left';
   const wl=update._wl!=null?update._wl:0;
-  const modeTag={waves:'🌊',base:'💥',eternal:'♾'}[gameMode]||'';
-  ctx.fillText(gameMode==='eternal'?`${modeTag} ETERNAL W${wave}: ${wl} left   [B] SHOP anytime   [SPACE] MSL${S.missile?' Lv'+S.missile:''}`:(phase==='inter'?`SHOP OPEN — buy upg, then START ROUND ${wave+1}`:`${modeTag} ROUND ${wave}: ${wl} jets left   [SPACE] MISSILES${S.missile?' Lv'+S.missile:''}`),10,H-10);
+  const modeTag={waves:'🌊',base:'💥',eternal:'♾',daily:'📅'}[gameMode]||'';
+  ctx.fillText(gameMode==='eternal'?`${modeTag} ETERNAL W${wave}: ${wl} left${comboN>1?' 🔥x'+comboMult().toFixed(1):''}   [B] SHOP anytime   [SPACE] MSL${S.missile?' Lv'+S.missile:''}`:(phase==='inter'?`SHOP OPEN — buy upg, then START ROUND ${wave+1}`:`${modeTag} ROUND ${wave}: ${wl} jets left${comboN>1?' 🔥x'+comboMult().toFixed(1):''}   [SPACE] MISSILES${S.missile?' Lv'+S.missile:''}`),10,H-10);
   ctx.restore();
 }
 // init login + leaderboard UI (restore session: stay logged in unless logout)
